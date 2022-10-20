@@ -40,7 +40,6 @@ vector<int> delaunaySearchCircumcircle(const vector<Point>& points, const vector
 }
 
 int delaunayFindPoint(const vector<Point>& points, const vector<int>& indices, const Partition& partition, int depth, Bounds bounds, Edge edgeActive){
-    //float edgeDistance = distance(points[edgeActive.i1], points[edgeActive.i2]);
     float edgeCenterX = (points[edgeActive.i1].x + points[edgeActive.i2].x) / 2.0f;
     float edgeCenterY = (points[edgeActive.i1].y + points[edgeActive.i2].y) / 2.0f;
 
@@ -65,40 +64,17 @@ int delaunayFindPoint(const vector<Point>& points, const vector<int>& indices, c
 
     if(indexP3 != -1){
         profiler::startSection(depth, profiler::L_CIRCLE);
-        bool foundNewPoint;
-       // do{
-            foundNewPoint = false;
-            for(int i : delaunaySearchCircumcircle(points, indices, partition, bounds, edgeActive, indexP3)){
-                if(isAboveEdge(points, edgeActive, i)){
-                    Triangle triangle = makeClockwise(points, {edgeActive.i1, edgeActive.i2, indexP3});
-                    if(isInCircle(points[triangle.i1], points[triangle.i2], points[triangle.i3], points[i])){
-                        indexP3 = i;
-                        foundNewPoint = true;
-                    }
-                }
-            }
-       // }while(foundNewPoint);
-        profiler::stopSection(depth, profiler::L_CIRCLE);
-    }
-
-    return indexP3;
-
-    /*
-    int indexP3 = -1;
-    for(int offset = 0; offset <= PARTITION_DIMENSION; offset++){
-        for(int i : partition.search(edgeCenterX, edgeCenterY, offset, bounds)){
+        for(int i : delaunaySearchCircumcircle(points, indices, partition, bounds, edgeActive, indexP3)){
             if(isAboveEdge(points, edgeActive, i)){
-                if(indexP3 == -1){
+                Triangle triangle = makeClockwise(points, {edgeActive.i1, edgeActive.i2, indexP3});
+                if(isInCircle(points[triangle.i1], points[triangle.i2], points[triangle.i3], points[i])){
                     indexP3 = i;
-                }else{
-                    Triangle triangle = makeClockwise(points, {edgeActive.i1, edgeActive.i2, indexP3});
-                    if(isInCircle(points[triangle.i1], points[triangle.i2], points[triangle.i3], points[i])){
-                        indexP3 = i;
-                    }
                 }
             }
         }
-    }*/
+        profiler::stopSection(depth, profiler::L_CIRCLE);
+    }
+
     return indexP3;
 }
 
