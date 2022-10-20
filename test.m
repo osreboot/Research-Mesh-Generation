@@ -2,7 +2,7 @@ close all hidden
 clc
 clear all
 
-points = cast(rand(20000, 2), "single");
+points = cast(rand(40000, 2), "single");
 writematrix(points, "points.dat", "Delimiter", ' ');
 
 %%
@@ -15,6 +15,7 @@ tic
 connectionsMatlab = delaunay(points);
 toc
 
+%%
 subplot(1, 2, 1);
 hold on;
 title("MATLAB - Triangles: " + size(connectionsMatlab, 1));

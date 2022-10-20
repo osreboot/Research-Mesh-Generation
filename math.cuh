@@ -41,8 +41,8 @@ Triangle makeSequential(const vector<Point>& points, Triangle triangle){
 }
 
 bool isAboveEdge(const vector<Point>& points, Edge edge, int indexPoint){
-    return 1.0 * (points[indexPoint].x - points[edge.i1].x) * (points[edge.i2].y - points[edge.i1].y) -
-           1.0 * (points[indexPoint].y - points[edge.i1].y) * (points[edge.i2].x - points[edge.i1].x) < 0.0;
+    return ((double)points[indexPoint].x - (double)points[edge.i1].x) * ((double)points[edge.i2].y - (double)points[edge.i1].y) -
+           ((double)points[indexPoint].y - (double)points[edge.i1].y) * ((double)points[edge.i2].x - (double)points[edge.i1].x) < 0.0;
 }
 
 bool isInCircle(Point a, Point b, Point c, Point d){

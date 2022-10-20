@@ -53,8 +53,7 @@ int delaunayFindPoint(const vector<Point>& points, const vector<int>& indices, c
                 if(indexP3 == -1){
                     indexP3 = i;
                 }else{
-                    Triangle triangle = makeClockwise(points, {edgeActive.i1, edgeActive.i2, indexP3});
-                    if(isInCircle(points[triangle.i1], points[triangle.i2], points[triangle.i3], points[i])){
+                    if(isInCircle(points[edgeActive.i2], points[edgeActive.i1], points[indexP3], points[i])){
                         indexP3 = i;
                     }
                 }
@@ -69,8 +68,7 @@ int delaunayFindPoint(const vector<Point>& points, const vector<int>& indices, c
         profiler::startSection(depth, profiler::L_CIRCLE);
         for(int i : delaunaySearchCircumcircle(points, indices, partition, bounds, edgeActive, indexP3)){
             if(isAboveEdge(points, edgeActive, i)){
-                Triangle triangle = makeClockwise(points, {edgeActive.i1, edgeActive.i2, indexP3});
-                if(isInCircle(points[triangle.i1], points[triangle.i2], points[triangle.i3], points[i])){
+                if(isInCircle(points[edgeActive.i2], points[edgeActive.i1], points[indexP3], points[i])){
                     indexP3 = i;
                 }
             }
@@ -148,22 +146,20 @@ unordered_set<Triangle> delaunay(const vector<Point>& points, const vector<int>&
         Edge edge = *edgesActiveWall.begin();
         edgesActiveWall.erase(edgesActiveWall.begin());
 
-        int p3Index = delaunayFindPoint(points, indices, partition, depth, bounds, edge);
+        int indexP3 = delaunayFindPoint(points, indices, partition, depth, bounds, edge);
 
-        if(p3Index > -1){ // Check if we've made a new triangle
-            profiler::startSection(depth, profiler::SAVE);
-            Triangle triangle = makeClockwise(points, {p3Index, edge.i1, edge.i2});
-
+        if(indexP3 > -1){ // Check if we've made a new triangle
             // Add new triangle to output list
             // ==> This needs to be sequential so we can safely handle potential duplicate output triangles
-            Triangle triangleOutput = makeSequential(points, triangle);
+            profiler::startSection(depth, profiler::SAVE);
+            Triangle triangleOutput = makeSequential(points, {edge.i2, edge.i1, indexP3});
             if(output.count(triangleOutput)) cerr << "Generated a duplicate triangle!" << endl;
             output.insert(triangleOutput);
             profiler::stopSection(depth, profiler::SAVE);
 
             // Update active edges based on the new triangle
             profiler::startSection(depth, profiler::CHAIN);
-            for(Edge e : vector<Edge>{{triangle.i1, triangle.i2}, {triangle.i3, triangle.i1}}){
+            for(Edge e : vector<Edge>{{indexP3, edge.i2}, {edge.i1, indexP3}}){
                 if(wall.intersects(points[e.i1], points[e.i2])){
                     if(edgesActiveWall.count(e) || edgesActiveWall.count(e.reverse())){
                         edgesActiveWall.erase(e);
@@ -174,11 +170,11 @@ unordered_set<Triangle> delaunay(const vector<Point>& points, const vector<int>&
                         edgesActive2.erase(e);
                         edgesActive2.erase(e.reverse());
                     }else edgesActive2.insert(e);
-                }else {
-                    if (edgesActive1.count(e) || edgesActive1.count(e.reverse())) {
+                }else{
+                    if(edgesActive1.count(e) || edgesActive1.count(e.reverse())){
                         edgesActive1.erase(e);
                         edgesActive1.erase(e.reverse());
-                    } else edgesActive1.insert(e);
+                    }else edgesActive1.insert(e);
                 }
             }
             profiler::stopSection(depth, profiler::CHAIN);
