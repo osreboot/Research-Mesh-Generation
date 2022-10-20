@@ -9,12 +9,7 @@
 
 using namespace std;
 
-vector<int> delaunaySearchCircumcircle(const vector<Point>& points, const vector<int>& indices, const Partition& partition, Bounds bounds, Edge edgeActive, int indexP3){
-    Triangle triangle = makeClockwise(points,{edgeActive.i1, edgeActive.i2, indexP3});
-    const Point p1 = points[triangle.i1];
-    const Point p2 = points[triangle.i2];
-    const Point p3 = points[triangle.i3];
-
+vector<int> delaunaySearchCircumcircle(const Partition& partition, const Bounds& bounds, const Point& p1, const Point& p2, const Point& p3){
     // Algorithm source: https://mathworld.wolfram.com/Circumcircle.html
     double a = dets(p1.x, p1.y,
                     p2.x, p2.y,
@@ -66,7 +61,8 @@ int delaunayFindPoint(const vector<Point>& points, const vector<int>& indices, c
     // Optimize the existing triangle by searching for better matches inside its circumcircle
     if(indexP3 != -1){
         profiler::startSection(depth, profiler::L_CIRCLE);
-        for(int i : delaunaySearchCircumcircle(points, indices, partition, bounds, edgeActive, indexP3)){
+        // TODO this largely searches redundant cells, need to optimize
+        for(int i : delaunaySearchCircumcircle(partition, bounds, points[edgeActive.i2], points[edgeActive.i1], points[indexP3])){
             if(isAboveEdge(points, edgeActive, i)){
                 if(isInCircle(points[edgeActive.i2], points[edgeActive.i1], points[indexP3], points[i])){
                     indexP3 = i;
@@ -152,7 +148,7 @@ unordered_set<Triangle> delaunay(const vector<Point>& points, const vector<int>&
             // Add new triangle to output list
             // ==> This needs to be sequential so we can safely handle potential duplicate output triangles
             profiler::startSection(depth, profiler::SAVE);
-            Triangle triangleOutput = makeSequential(points, {edge.i2, edge.i1, indexP3});
+            Triangle triangleOutput = makeSequential(points, {edge.i1, indexP3, edge.i2});
             if(output.count(triangleOutput)) cerr << "Generated a duplicate triangle!" << endl;
             output.insert(triangleOutput);
             profiler::stopSection(depth, profiler::SAVE);

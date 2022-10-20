@@ -19,25 +19,11 @@ float distance(Point a, Point b){
     return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
-bool isClockwise(Point a, Point b, Point c){
-    return 1.0 * a.x * b.y + 1.0 * a.y * c.x + 1.0 * b.x * c.y -
-           1.0 * b.y * c.x - 1.0 * a.y * b.x - 1.0 * a.x * c.y < 0.0;
-}
-
-Triangle makeClockwise(const vector<Point>& points, Triangle triangle){
-    if(!isClockwise(points[triangle.i1], points[triangle.i2], points[triangle.i3])) {
-        int temp = triangle.i2;
-        triangle.i2 = triangle.i3;
-        triangle.i3 = temp;
-    }
-    return triangle;
-}
-
 Triangle makeSequential(const vector<Point>& points, Triangle triangle){
     int indexMin = min(min(triangle.i1, triangle.i2), triangle.i3);
-    int indexMax = max(max(triangle.i1, triangle.i2), triangle.i3);
-    int indexMid = triangle.i1 + triangle.i2 + triangle.i3 - indexMin - indexMax;
-    return makeClockwise(points, {indexMin, indexMid, indexMax});
+    if(indexMin == triangle.i1) return triangle;
+    if(indexMin == triangle.i2) return {triangle.i2, triangle.i3, triangle.i1};
+    else return {triangle.i3, triangle.i1, triangle.i2};
 }
 
 bool isAboveEdge(const vector<Point>& points, Edge edge, int indexPoint){
