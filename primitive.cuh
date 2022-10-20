@@ -106,13 +106,13 @@ public:
     vector<int> search(float xMin, float xMax, float yMin, float yMax, Bounds bounds) const {
         vector<int> output;
         int boundXMin = max(min((int)floor(bounds.xMin * PARTITION_DIMENSION), PARTITION_DIMENSION - 1), 0);
-        int boundXMax = max(min((int)ceil(bounds.xMax * PARTITION_DIMENSION), PARTITION_DIMENSION - 1), 0);
+        int boundXMax = max(min((int)floor(bounds.xMax * PARTITION_DIMENSION), PARTITION_DIMENSION - 1), 0);
         int boundYMin = max(min((int)floor(bounds.yMin * PARTITION_DIMENSION), PARTITION_DIMENSION - 1), 0);
-        int boundYMax = max(min((int)ceil(bounds.yMax * PARTITION_DIMENSION), PARTITION_DIMENSION - 1), 0);
+        int boundYMax = max(min((int)floor(bounds.yMax * PARTITION_DIMENSION), PARTITION_DIMENSION - 1), 0);
         xMin = max(min((int)floor(xMin * PARTITION_DIMENSION), boundXMax), boundXMin);
-        xMax = max(min((int)ceil(xMax * PARTITION_DIMENSION), boundXMax), boundXMin);
+        xMax = max(min((int)floor(xMax * PARTITION_DIMENSION), boundXMax), boundXMin);
         yMin = max(min((int)floor(yMin * PARTITION_DIMENSION), boundYMax), boundYMin);
-        yMax = max(min((int)ceil(yMax * PARTITION_DIMENSION), boundYMax), boundYMin);
+        yMax = max(min((int)floor(yMax * PARTITION_DIMENSION), boundYMax), boundYMin);
         for(int x = xMin; x <= xMax; x++){
             for(int y = yMin; y <= yMax; y++){
                 output.insert(output.begin(), partition[x][y].begin(), partition[x][y].end());

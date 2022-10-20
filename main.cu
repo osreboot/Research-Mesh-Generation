@@ -39,10 +39,12 @@ vector<int> delaunaySearchCircumcircle(const vector<Point>& points, const vector
     return partition.search((float)x0, (float)y0, (float)r, bounds);
 }
 
+// Attempt to find a point to pair with the supplied Edge to complete a triangle
 int delaunayFindPoint(const vector<Point>& points, const vector<int>& indices, const Partition& partition, int depth, Bounds bounds, Edge edgeActive){
     float edgeCenterX = (points[edgeActive.i1].x + points[edgeActive.i2].x) / 2.0f;
     float edgeCenterY = (points[edgeActive.i1].y + points[edgeActive.i2].y) / 2.0f;
 
+    // Traverse the spatial partition of points and attempt to find at least one close, valid point
     profiler::startSection(depth, profiler::L_FIRST);
     int indexP3 = -1;
     for(int offset = 0; offset <= PARTITION_DIMENSION; offset++){
@@ -62,6 +64,7 @@ int delaunayFindPoint(const vector<Point>& points, const vector<int>& indices, c
     }
     profiler::stopSection(depth, profiler::L_FIRST);
 
+    // Optimize the existing triangle by searching for better matches inside its circumcircle
     if(indexP3 != -1){
         profiler::startSection(depth, profiler::L_CIRCLE);
         for(int i : delaunaySearchCircumcircle(points, indices, partition, bounds, edgeActive, indexP3)){
@@ -150,6 +153,9 @@ unordered_set<Triangle> delaunay(const vector<Point>& points, const vector<int>&
         if(p3Index > -1){ // Check if we've made a new triangle
             profiler::startSection(depth, profiler::SAVE);
             Triangle triangle = makeClockwise(points, {p3Index, edge.i1, edge.i2});
+
+            // Add new triangle to output list
+            // ==> This needs to be sequential so we can safely handle potential duplicate output triangles
             Triangle triangleOutput = makeSequential(points, triangle);
             if(output.count(triangleOutput)) cerr << "Generated a duplicate triangle!" << endl;
             output.insert(triangleOutput);
