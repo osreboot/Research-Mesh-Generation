@@ -1,6 +1,6 @@
 #pragma once
 
-#define PARTITION_DIMENSION 150
+#define PARTITION_DIMENSION 20
 
 #include <algorithm>
 #include <vector>
@@ -19,7 +19,7 @@ struct Point{
 struct Edge{
     int i1, i2;
 
-    Edge reverse(){
+    Edge reverse() const {
         return {i2, i1};
     }
 
@@ -113,6 +113,7 @@ public:
         xMax = max(min((int)floor(xMax * PARTITION_DIMENSION), boundXMax), boundXMin);
         yMin = max(min((int)floor(yMin * PARTITION_DIMENSION), boundYMax), boundYMin);
         yMax = max(min((int)floor(yMax * PARTITION_DIMENSION), boundYMax), boundYMin);
+        //cout << "    " << xMax - xMin << " | " << yMax - yMin << endl;
         for(int x = xMin; x <= xMax; x++){
             for(int y = yMin; y <= yMax; y++){
                 output.insert(output.begin(), partition[x][y].begin(), partition[x][y].end());
@@ -131,6 +132,7 @@ public:
         int xMax = max(min((int)floor(xMid * PARTITION_DIMENSION) + offset, boundXMax), boundXMin);
         int yMin = max(min((int)floor(yMid * PARTITION_DIMENSION) - offset, boundYMax), boundYMin);
         int yMax = max(min((int)floor(yMid * PARTITION_DIMENSION) + offset, boundYMax), boundYMin);
+        //cout << "[" << offset << "] " << xMax - xMin << " | " << yMax - yMin << endl;
         if(offset == 0){
             output.insert(output.begin(), partition[xMin][yMin].begin(), partition[xMin][yMin].end());
         }else{

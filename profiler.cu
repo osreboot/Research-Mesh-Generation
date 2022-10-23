@@ -19,20 +19,22 @@ inline auto elapsedNano(Time timeStart, Time timeEnd){
 
 namespace profiler{
 
+    vector<Section> sectionsActive;
     Time timeProgramStart, timeLocalBranch, timeLocalSection;
     vector<unordered_map<Section, unsigned long long>> times;
 
-    void startProgram(){
+    void startProgram(const vector<Section>& sectionsActiveArg){
+        sectionsActive = sectionsActiveArg;
         timeProgramStart = now();
     }
 
     void stopProgram(){
         auto elapsedNanoTotal = elapsedNano(timeProgramStart, now());
 
-        for(int i = 0; i < times.size(); i++){
-            for(Section section : sections){
-                if(section != OTHER && times[i].count(section)){
-                    times[i][OTHER] -= times[i][section];
+        for(auto& time : times){
+            for(Section section : sectionsActive){
+                if(section != OTHER && time.count(section)){
+                    time[OTHER] -= time[section];
                 }
             }
         }
@@ -44,14 +46,14 @@ namespace profiler{
         }
 
         fileProfile << elapsedNanoTotal;
-        for(Section section : sections){
+        for(Section section : sectionsActive){
             fileProfile << "," << section;
         }
         fileProfile << "\n";
 
         for(int i = 0; i < times.size(); i++){
             fileProfile << i;
-            for(Section section : sections){
+            for(Section section : sectionsActive){
                 if(times[i].count(section)){
                     fileProfile << "," << times[i][section];
                 }else fileProfile << "," << 0;

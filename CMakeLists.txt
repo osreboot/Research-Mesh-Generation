@@ -7,6 +7,8 @@ set(SOURCE_FILES
         "main.cu"
         "primitive.cuh"
         "math.cuh"
+        "dewall.cuh"
+        "blelloch.cuh"
         "profiler.cuh"
         "profiler.cu")
 
