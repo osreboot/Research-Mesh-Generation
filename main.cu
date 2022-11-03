@@ -43,11 +43,11 @@ int main(){
     // Run delaunay triangulation
     cout << "Starting triangulation..." << endl;
 
-    //profiler::startProgram(profiler::sectionsDeWall);
-    //unordered_set<Triangle> connections = dewall::triangulate(points, indices, partition, Bounds(0.0f, 1.0f, 0.0f, 1.0f), {}, 0);
+    profiler::startProgram(profiler::sectionsDeWall);
+    unordered_set<Triangle> connections = dewall::triangulate(points, indices, partition, Bounds(0.0f, 1.0f, 0.0f, 1.0f), {}, 0);
 
-    profiler::startProgram(profiler::sectionsBlelloch);
-    unordered_set<Triangle> connections = blelloch::triangulate(points, indices);
+    //profiler::startProgram(profiler::sectionsBlelloch);
+    //unordered_set<Triangle> connections = blelloch::triangulate(points, indices);
 
     profiler::stopProgram();
 

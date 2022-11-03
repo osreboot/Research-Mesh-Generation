@@ -10,7 +10,8 @@ using namespace std;
 
 namespace dewall{
 
-    vector<int> searchCircumcircle(const Partition& partition, const Bounds& bounds, const Point& p1, const Point& p2, const Point& p3){
+    vector<int> searchCircumcircle(const Partition& partition, const Bounds& bounds, const Point& p1, const Point& p2,
+                                   const Point& p3){
         // Algorithm source: https://mathworld.wolfram.com/Circumcircle.html
         double a = dets(p1.x, p1.y,
                         p2.x, p2.y,
@@ -36,7 +37,8 @@ namespace dewall{
     }
 
     // Attempt to find a point to pair with the supplied Edge to complete a triangle
-    int findPoint(const vector<Point>& points, const Partition& partition, int depth, Bounds bounds, Edge edgeActive){
+    int findPoint(const vector<Point>& points, const Partition& partition, int depth, const Bounds& bounds,
+                  const Edge &edgeActive){
         float edgeCenterX = (points[edgeActive.i1].x + points[edgeActive.i2].x) / 2.0f;
         float edgeCenterY = (points[edgeActive.i1].y + points[edgeActive.i2].y) / 2.0f;
 
@@ -80,8 +82,9 @@ namespace dewall{
     }
 
     // Algorithm source: https://doi.org/10.1016/S0010-4485(97)00082-1
-    unordered_set<Triangle> triangulate(const vector<Point>& points, const vector<int>& indices, const Partition& partition, Bounds bounds,
-                                   unordered_set<Edge> edgesActive, int depth){
+    unordered_set<Triangle> triangulate(const vector<Point>& points, const vector<int>& indices,
+                                        const Partition& partition, Bounds bounds, unordered_set<Edge> edgesActive,
+                                        int depth){
 
         profiler::startBranch(depth);
 
