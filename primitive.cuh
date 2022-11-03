@@ -1,6 +1,6 @@
 #pragma once
 
-#define PARTITION_DIMENSION 20
+#define PARTITION_DIMENSION 100
 
 #include <algorithm>
 #include <vector>

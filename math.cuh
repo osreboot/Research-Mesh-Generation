@@ -33,7 +33,9 @@ bool isAboveEdge(const Point& pEdge1, const Point& pEdge2, const Point& pTest){
 
 bool isInCircle(const Point& a, const Point& b, const Point& c, const Point& d){
     // Fast "out" region test
-    if(isAboveEdge(a, b, d) + isAboveEdge(b, c, d) + isAboveEdge(c, a, d) >= 2) return false;
+    const int edgeSum = isAboveEdge(a, b, d) + isAboveEdge(b, c, d) + isAboveEdge(c, a, d);
+    if(edgeSum == 0) return true;
+    if(edgeSum >= 2) return false;
 
     return det(a.x - d.x, a.y - d.y, (a.x * a.x - d.x * d.x) + (a.y * a.y - d.y * d.y),
                b.x - d.x, b.y - d.y, (b.x * b.x - d.x * d.x) + (b.y * b.y - d.y * d.y),
