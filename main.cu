@@ -32,10 +32,10 @@ vector<Point> loadPoints(){
     return points;
 }
 
-void saveConnections(const unordered_set<Triangle>& connections){
+void saveTriangles(const unordered_set<Triangle>& triangles){
     ofstream fileConnections("../connections.dat");
     if(!fileConnections.is_open()) throw runtime_error("Failed to open connections file!");
-    for(Triangle triangle : connections){
+    for(Triangle triangle : triangles){
         fileConnections << triangle.i1 << " " << triangle.i2 << " " << triangle.i3 << " " << endl;
     }
     fileConnections.close();
@@ -64,7 +64,7 @@ int runCirclesTest(const vector<profiler::Section>& profilerSections,
 }
 
 int runMeshGeneration(const vector<profiler::Section>& profilerSections,
-                      const function<unordered_set<Triangle>(const vector<Point>&, const vector<int>&)>& func){
+                      const function<vector<Triangle>(const vector<Point>&, const vector<int>&)>& func){
     // Load points from file
     cout << "Loading points from file..." << endl;
     vector<Point> points = loadPoints();
@@ -79,12 +79,23 @@ int runMeshGeneration(const vector<profiler::Section>& profilerSections,
     // Run delaunay triangulation
     cout << "Starting triangulation..." << endl;
     profiler::startProgram(profilerSections);
-    unordered_set<Triangle> connections = func(points, indices);
+    vector<Triangle> connections = func(points, indices);
     profiler::stopProgram();
 
-    // Write connections to file
-    cout << "Writing connections to file..." << endl;
-    saveConnections(connections);
+    // Post-process output data
+    cout << "Verifying output triangles..." << endl;
+    unordered_set<Triangle> triangles;
+    int duplicates = 0;
+    for(Triangle triangle : connections){
+        Triangle triangleOutput = makeSequential(points, {triangle.i1, triangle.i2, triangle.i3});
+        if(triangles.count(triangleOutput)) duplicates++;
+        triangles.insert(triangleOutput);
+    }
+    if(duplicates > 0) cerr << "Generated " << duplicates << " duplicate triangle(s)!" << endl;
+
+    // Write triangles to file
+    cout << "Writing triangles to file..." << endl;
+    saveTriangles(triangles);
 
     return 0;
 }

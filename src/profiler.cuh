@@ -22,7 +22,7 @@ namespace profiler{
         OTHER
     };
 
-    const vector<Section> sectionsMeshDeWall = {WALL, INIT, L_FIRST, L_CIRCLE, SAVE, CHAIN, MERGE, POST, OTHER};
+    const vector<Section> sectionsMeshDeWall = {WALL, INIT, L_FIRST, L_CIRCLE, SAVE, CHAIN, MERGE, OTHER};
     const vector<Section> sectionsMeshBlelloch = {INIT, PREP, REPLACE, SAVE, REDACT, POST, OTHER};
 
     inline ostream& operator<<(ostream& ostr, Section section){

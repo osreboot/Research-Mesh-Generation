@@ -36,10 +36,6 @@ namespace mesh_dewall{
             constrain(bounds.xMin, bounds.xMax, bounds.yMin, bounds.yMax);
         }
 
-        int area(){
-            return (xMax - xMin) * (yMax - yMin);
-        }
-
     };
 
     class Partition{
@@ -137,7 +133,8 @@ namespace mesh_dewall{
             // Omit already searched cells
             for(int x = partitionBounds2.xMin; x <= partitionBounds2.xMax; x++){
                 for(int y = partitionBounds2.yMin; y <= partitionBounds2.yMax; y++){
-                    if(x >= partitionBounds.xMin && x <= partitionBounds.xMax && y >= partitionBounds.yMin && y <= partitionBounds.yMax){
+                    if(x >= partitionBounds.xMin && x <= partitionBounds.xMax &&
+                       y >= partitionBounds.yMin && y <= partitionBounds.yMax){
                         y = partitionBounds.yMax;
                     }else testPoints(points, partition.partition[x][y], edgeActive, indexP3);
                 }
@@ -273,23 +270,11 @@ namespace mesh_dewall{
         return output;
     }
 
-    unordered_set<Triangle> triangulate(const vector<Point>& points, const vector<int>& indices){
+    vector<Triangle> triangulate(const vector<Point>& points, const vector<int>& indices){
         Partition partition;
         for(int i : indices) partition.insert(points[i], i);
 
-        vector<Triangle> triangles = triangulateRecursive(points, indices, partition, Bounds(0.0f, 1.0f, 0.0f, 1.0f), {}, 0);
-
-        profiler::startBranch(0);
-        profiler::startSection(0, profiler::POST);
-        unordered_set<Triangle> output;
-        for(Triangle triangle : triangles){
-            Triangle triangleOutput = makeSequential(points, {triangle.i1, triangle.i2, triangle.i3});
-            if(output.count(triangleOutput)) cerr << "Generated a duplicate triangle!" << endl;
-            output.insert(triangleOutput);
-        }
-        profiler::stopSection(0, profiler::POST);
-        profiler::stopBranch(0);
-        return output;
+        return triangulateRecursive(points, indices, partition, Bounds(0.0f, 1.0f, 0.0f, 1.0f), {}, 0);
     }
 
 }
