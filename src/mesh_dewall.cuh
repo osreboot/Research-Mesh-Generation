@@ -7,7 +7,7 @@
 #include "profiler.cuh"
 
 #define PARTITION_DIMENSION 100
-#define CELL_SIZE 1.0f / (float)PARTITION_DIMENSION
+#define CELL_SIZE (1.0f / (float)PARTITION_DIMENSION)
 
 using namespace std;
 
@@ -148,30 +148,6 @@ namespace mesh_dewall{
         return indexP3;
     }
 
-    void testProximityWall(const vector<Point>& points, const vector<int>& indicesTest, const Wall& wall,
-                           int& indexClosest, float& distClosest){
-        for(int i : indicesTest){
-            float dist = wall.distance(points[i]);
-            if(dist < distClosest){
-                indexClosest = i;
-                distClosest = dist;
-            }
-        }
-    }
-
-    void testProximityPoint(const vector<Point>& points, const vector<int>& indicesTest, const int indexRef,
-                            const Wall& wall, bool wallSide, int& indexClosest, float& distClosest){
-        for(int i : indicesTest){
-            if(wall.side(points[i]) == wallSide){
-                float dist = distance(points[indexRef], points[i]);
-                if(dist < distClosest){
-                    indexClosest = i;
-                    distClosest = dist;
-                }
-            }
-        }
-    }
-
     // Algorithm source: https://doi.org/10.1016/S0010-4485(97)00082-1
     vector<Triangle> triangulateRecursive(const vector<Point>& points, const vector<int>& indices,
                                           const Partition& partition, Bounds bounds, unordered_set<Edge> edgesActive,
@@ -197,69 +173,26 @@ namespace mesh_dewall{
         // Initialize with first edges if we have no active edges
         if(edgesActive.empty() && depth == 0){
             // Find nearest point to dividing line (first edge point)
-            //   Do this by searching the spatial partition in strips on either side of the wall, slowly walking out
-            //   until we find a valid point.
-            int aIndex = -1;
-            float aDistance = 1.0f;
-            PartitionBounds partitionBounds(0.0f, 0.0f, 0.0f, 0.0f);
-            for(float offset = CELL_SIZE; offset <= 1.0f; offset += CELL_SIZE){
-                partitionBounds = wall.horizontal ?
-                        PartitionBounds(0.0f, wall.locationDivider - offset, 1.0f, wall.locationDivider + offset) :
-                        PartitionBounds(wall.locationDivider - offset, 0.0f, wall.locationDivider + offset, 1.0f);
-                partitionBounds.constrain(bounds);
-
-                if(offset <= CELL_SIZE){
-                    for(int x = partitionBounds.xMin; x <= partitionBounds.xMax; x++){
-                        for(int y = partitionBounds.yMin; y <= partitionBounds.yMax; y++){
-                            testProximityWall(points, partition.partition[x][y], wall, aIndex, aDistance);
-                        }
-                    }
-                }else{
-                    if(wall.horizontal){
-                        for(int x = partitionBounds.xMin; x <= partitionBounds.xMax; x++){
-                            testProximityWall(points, partition.partition[x][partitionBounds.yMin], wall, aIndex, aDistance);
-                            testProximityWall(points, partition.partition[x][partitionBounds.yMax], wall, aIndex, aDistance);
-                        }
-                    }else{
-                        for(int y = partitionBounds.yMin; y <= partitionBounds.yMax; y++){
-                            testProximityWall(points, partition.partition[partitionBounds.xMin][y], wall, aIndex, aDistance);
-                            testProximityWall(points, partition.partition[partitionBounds.xMax][y], wall, aIndex, aDistance);
-                        }
-                    }
+            int aIndex = indices[0];
+            float aDistance = wall.distance(points[indices[0]]);
+            for(int i : indices){
+                float iDistance = wall.distance(points[i]);
+                if(iDistance < aDistance){
+                    aIndex = i;
+                    aDistance = iDistance;
                 }
-
-                if(aIndex != -1) break;
             }
             bool aSide = wall.side(points[aIndex]);
 
             // Find nearest point to A on other side of dividing wall (second edge point)
-            //   Do this by searching the spatial partition in an expanding square around the starting point, until we
-            //   find the next closest point.
-            int bIndex = -1;
-            float bDistance = 1.0f;
-            partitionBounds = PartitionBounds(0.0f, 0.0f, 0.0f, 0.0f);
-            for(float offset = CELL_SIZE; offset <= 1.0f; offset += CELL_SIZE){
-                partitionBounds = PartitionBounds(points[aIndex].x - offset, points[aIndex].x + offset, points[aIndex].y - offset, points[aIndex].y + offset);
-                partitionBounds.constrain(bounds);
-
-                if(offset <= CELL_SIZE){
-                    for(int x = partitionBounds.xMin; x <= partitionBounds.xMax; x++){
-                        for(int y = partitionBounds.yMin; y <= partitionBounds.yMax; y++){
-                            testProximityPoint(points, partition.partition[x][y], aIndex, wall, !aSide, bIndex, bDistance);
-                        }
-                    }
-                }else{
-                    for(int x = partitionBounds.xMin; x <= partitionBounds.xMax; x++){
-                        testProximityPoint(points, partition.partition[x][partitionBounds.yMin], aIndex, wall, !aSide, bIndex, bDistance);
-                        testProximityPoint(points, partition.partition[x][partitionBounds.yMax], aIndex, wall, !aSide, bIndex, bDistance);
-                    }
-                    for(int y = partitionBounds.yMin + 1; y < partitionBounds.yMax; y++){
-                        testProximityPoint(points, partition.partition[partitionBounds.xMin][y], aIndex, wall, !aSide, bIndex, bDistance);
-                        testProximityPoint(points, partition.partition[partitionBounds.xMax][y], aIndex, wall, !aSide, bIndex, bDistance);
-                    }
+            int bIndex = aSide ? indicesLeft[0] : indicesRight[0];
+            float bDistance = distance(points[aIndex], points[bIndex]);
+            for(int i : (aSide ? indicesLeft : indicesRight)){
+                float iDistance = distance(points[aIndex], points[i]);
+                if(iDistance < bDistance){
+                    bIndex = i;
+                    bDistance = iDistance;
                 }
-
-                if(bIndex != -1) break;
             }
 
             edgesActive.insert({aIndex, bIndex});
