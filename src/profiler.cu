@@ -64,7 +64,7 @@ namespace profiler{
         fileProfile.close();
     }
 
-    void startBranch(int depth){
+    void startBranch(const int& depth){
         if(times.size() <= depth){
             unordered_map<Section, unsigned long long> timeMap;
             times.push_back(timeMap);
@@ -72,11 +72,11 @@ namespace profiler{
         timeLocalBranch = now();
     }
 
-    void stopBranch(int depth){
+    void stopBranch(const int& depth){
         times[depth][OTHER] += elapsedNano(timeLocalBranch, now());
     }
 
-    void startSection(int depth, Section section){
+    void startSection(const int& depth, const Section& section){
         if(times.size() <= depth){
             unordered_map<Section, unsigned long long> timeMap;
             times.push_back(timeMap);
@@ -84,7 +84,7 @@ namespace profiler{
         timeLocalSection = now();
     }
 
-    void stopSection(int depth, Section section){
+    void stopSection(const int& depth, const Section& section){
         times[depth][section] += elapsedNano(timeLocalSection, now());
     }
 

@@ -61,11 +61,15 @@ public:
         yMid = (yMinArg + yMaxArg) / 2.0f;
         yMax = yMaxArg;
     }
+
+    bool contains(const Point& point) const {
+        return point.x >= xMin && point.x <= xMax && point.y >= yMin && point.y <= yMax;
+    }
 };
 
 struct Wall{
 
-    static Wall build(Bounds bounds, int depth){
+    static Wall build(const Bounds& bounds, const int& depth){
         bool horizontal = depth % 2 == 0;
         return {horizontal, horizontal ? bounds.xMid : bounds.yMid};
     }
@@ -73,15 +77,15 @@ struct Wall{
     const bool horizontal;
     const float locationDivider;
 
-    float distance(Point point) const {
+    float distance(const Point& point) const {
         return horizontal ? abs(locationDivider - point.x) : abs(locationDivider - point.y);
     }
 
-    bool side(Point point) const {
+    bool side(const Point& point) const {
         return horizontal ? point.x >= locationDivider : point.y >= locationDivider;
     }
 
-    bool intersects(Point point1, Point point2) const {
+    bool intersects(const Point& point1, const Point& point2) const {
         return side(point1) != side(point2);
     }
 };

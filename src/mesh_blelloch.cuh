@@ -58,7 +58,7 @@ namespace mesh_blelloch{
         return output;
     }
 
-    unordered_set<Triangle> triangulate(const vector<Point>& points, const vector<int>& indices){
+    vector<Triangle> triangulate(const vector<Point>& points, const vector<int>& indices){
         unordered_set<shared_ptr<TriangleB>> trianglesOutput;
         unordered_map<Edge, shared_ptr<TriangleB>> edgeLinks;
         unordered_map<int, unordered_set<shared_ptr<TriangleB>>> pointsEnc;
@@ -133,12 +133,12 @@ namespace mesh_blelloch{
         // Convert to other triangle object
         profiler::startBranch(20);
         profiler::startSection(20, profiler::POST);
-        unordered_set<Triangle> output;
+        vector<Triangle> output;
         for(const shared_ptr<TriangleB>& t : trianglesOutput){
             // Omit super triangle
             TriangleB triangle = *t;
             if(triangle.i1 < indices.size() && triangle.i2 < indices.size() && triangle.i3 < indices.size()) {
-                output.insert({triangle.i1, triangle.i2, triangle.i3});
+                output.push_back({triangle.i1, triangle.i2, triangle.i3});
             }
         }
         profiler::stopSection(20, profiler::POST);
