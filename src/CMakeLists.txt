@@ -1,8 +1,11 @@
 list(APPEND SOURCE_FILES
         "primitive.cuh"
         "math.cuh"
-        "circles_linear.cuh"
+        "circles_noop.cuh"
+        "circles_serial.cuh"
         "mesh_dewall.cuh"
         "mesh_blelloch.cuh"
-        "profiler.cuh"
-        "profiler.cu")
+        "profiler_circles.cuh"
+        "profiler_circles.cu"
+        "profiler_mesh.cuh"
+        "profiler_mesh.cu")

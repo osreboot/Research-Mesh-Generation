@@ -3,5 +3,5 @@
 
 connections.dat
 points.dat
-profile.csv
+profile*.csv
 test.asv

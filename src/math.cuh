@@ -19,6 +19,20 @@ float distance(const Point& a, const Point& b){
     return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
+bool isClockwise(Point a, Point b, Point c){
+    return 1.0 * a.x * b.y + 1.0 * a.y * c.x + 1.0 * b.x * c.y -
+           1.0 * b.y * c.x - 1.0 * a.y * b.x - 1.0 * a.x * c.y < 0.0;
+}
+
+Triangle makeClockwise(const vector<Point>& points, Triangle triangle){
+    if(!isClockwise(points[triangle.i1], points[triangle.i2], points[triangle.i3])) {
+        int temp = triangle.i2;
+        triangle.i2 = triangle.i3;
+        triangle.i3 = temp;
+    }
+    return triangle;
+}
+
 Triangle makeSequential(const vector<Point>& points, const Triangle& triangle){
     int indexMin = min(min(triangle.i1, triangle.i2), triangle.i3);
     if(indexMin == triangle.i1) return triangle;
@@ -39,5 +53,11 @@ bool isInCircle(const Point& a, const Point& b, const Point& c, const Point& d){
 
     return det(a.x - d.x, a.y - d.y, (a.x * a.x - d.x * d.x) + (a.y * a.y - d.y * d.y),
                b.x - d.x, b.y - d.y, (b.x * b.x - d.x * d.x) + (b.y * b.y - d.y * d.y),
-               c.x - d.x, c.y - d.y, (c.x * c.x - d.x * d.x) + (c.y * c.y - d.y * d.y)) < 0.0;
+               c.x - d.x, c.y - d.y, (c.x * c.x - d.x * d.x) + (c.y * c.y - d.y * d.y)) <= 0.0;
+}
+
+bool isInCircleSlow(const Point& a, const Point& b, const Point& c, const Point& d){
+    return det(a.x - d.x, a.y - d.y, (a.x * a.x - d.x * d.x) + (a.y * a.y - d.y * d.y),
+               b.x - d.x, b.y - d.y, (b.x * b.x - d.x * d.x) + (b.y * b.y - d.y * d.y),
+               c.x - d.x, c.y - d.y, (c.x * c.x - d.x * d.x) + (c.y * c.y - d.y * d.y)) <= 0.0;
 }

@@ -3,27 +3,29 @@
 #include <chrono>
 #include <unordered_map>
 
-#include "profiler.cuh"
+#include "profiler_mesh.cuh"
 
 using namespace std;
 
 #define Time chrono::high_resolution_clock::time_point
 
-inline auto now(){
-    return chrono::high_resolution_clock::now();
-}
+namespace profiler_mesh{
 
-inline auto elapsedNano(Time timeStart, Time timeEnd){
-    return chrono::duration_cast<chrono::nanoseconds>(timeEnd - timeStart).count();
-}
+    inline auto now(){
+        return chrono::high_resolution_clock::now();
+    }
 
-namespace profiler{
+    inline auto elapsedNano(Time timeStart, Time timeEnd){
+        return chrono::duration_cast<chrono::nanoseconds>(timeEnd - timeStart).count();
+    }
 
+    string fileName;
     vector<Section> sectionsActive;
     Time timeProgramStart, timeLocalBranch, timeLocalSection;
     vector<unordered_map<Section, unsigned long long>> times;
 
-    void startProgram(const vector<Section>& sectionsActiveArg){
+    void startProgram(const string& fileNameArg, const vector<Section>& sectionsActiveArg){
+        fileName = fileNameArg;
         sectionsActive = sectionsActiveArg;
         timeProgramStart = now();
     }
@@ -40,7 +42,7 @@ namespace profiler{
         }
 
         cout << "Writing profile to file..." << endl;
-        ofstream fileProfile("../profile.csv");
+        ofstream fileProfile("../profile_" + fileName + "_mesh.csv");
         if(!fileProfile.is_open()){
             cerr << "Failed to open profile file!" << endl;
         }

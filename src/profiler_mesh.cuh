@@ -5,7 +5,7 @@
 
 using namespace std;
 
-namespace profiler{
+namespace profiler_mesh{
 
     enum Section{
         WALL,
@@ -51,7 +51,7 @@ namespace profiler{
         }
     }
 
-    void startProgram(const vector<Section>& sectionsActiveArg);
+    void startProgram(const string& fileNameArg, const vector<Section>& sectionsActiveArg);
     void stopProgram();
 
     void startBranch(const int& depth);

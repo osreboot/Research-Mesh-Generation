@@ -5,7 +5,7 @@
 
 #include "primitive.cuh"
 #include "math.cuh"
-#include "profiler.cuh"
+#include "profiler_mesh.cuh"
 
 using namespace std;
 
@@ -64,8 +64,8 @@ namespace mesh_blelloch{
         unordered_map<int, unordered_set<shared_ptr<TriangleB>>> pointsEnc;
 
         // Create super triangle
-        profiler::startBranch(0);
-        profiler::startSection(0, profiler::INIT);
+        profiler_mesh::startBranch(0);
+        profiler_mesh::startSection(0, profiler_mesh::INIT);
         vector<Point> pointsS = points;
         pointsS.push_back({-10000000000.0f, -10000000000.0f});
         pointsS.push_back({-10000000000.0f, 20000000000.0f});
@@ -75,8 +75,8 @@ namespace mesh_blelloch{
             triangleSuper->pointsEnc.insert(i);
             pointsEnc.insert({i, {triangleSuper}});
         }
-        profiler::stopSection(0, profiler::INIT);
-        profiler::stopBranch(0);
+        profiler_mesh::stopSection(0, profiler_mesh::INIT);
+        profiler_mesh::stopBranch(0);
 
         // Invoke replace
         int depth = 1;
@@ -86,25 +86,25 @@ namespace mesh_blelloch{
             unordered_set<shared_ptr<TriangleB>> trianglesIEnc = pairEnc.second;
             pointsEnc.erase(i);
 
-            profiler::startBranch(depth);
+            profiler_mesh::startBranch(depth);
 
             // Prepare edge list for triangle replacement
-            profiler::startSection(depth, profiler::PREP);
+            profiler_mesh::startSection(depth, profiler_mesh::PREP);
             unordered_set<Edge> edgesReplacing;
             for(const shared_ptr<TriangleB>& t : trianglesIEnc){
                 unordered_set<Edge> edges = t->getEdges();
                 edgesReplacing.insert(edges.begin(), edges.end());
             }
-            profiler::stopSection(depth, profiler::PREP);
+            profiler_mesh::stopSection(depth, profiler_mesh::PREP);
 
             // Delete & replace all the triangles that i is encroaching on
             for(const shared_ptr<TriangleB>& t : trianglesIEnc){
                 // Replace t
-                profiler::startSection(depth, profiler::REPLACE);
+                profiler_mesh::startSection(depth, profiler_mesh::REPLACE);
                 vector<shared_ptr<TriangleB>> trianglesNew = replace(pointsS, edgeLinks, edgesReplacing, *t, i);
-                profiler::stopSection(depth, profiler::REPLACE);
+                profiler_mesh::stopSection(depth, profiler_mesh::REPLACE);
 
-                profiler::startSection(depth, profiler::SAVE);
+                profiler_mesh::startSection(depth, profiler_mesh::SAVE);
                 for(const shared_ptr<TriangleB>& tn : trianglesNew){
                     trianglesOutput.insert(tn);
                     // This new triangle isn't complete, populate the global encroaching points list
@@ -116,23 +116,23 @@ namespace mesh_blelloch{
                         edgeLinks.insert({edge, tn});
                     }
                 }
-                profiler::stopSection(depth, profiler::SAVE);
-                profiler::startSection(depth, profiler::REDACT);
+                profiler_mesh::stopSection(depth, profiler_mesh::SAVE);
+                profiler_mesh::startSection(depth, profiler_mesh::REDACT);
                 // Delete t and unlink all points
                 trianglesOutput.erase(t);
                 for(int iOld : t->pointsEnc){
                     if(pointsEnc.count(iOld)) pointsEnc.find(iOld)->second.erase(t);
                 }
-                profiler::stopSection(depth, profiler::REDACT);
+                profiler_mesh::stopSection(depth, profiler_mesh::REDACT);
             }
 
-            profiler::stopBranch(depth);
+            profiler_mesh::stopBranch(depth);
             depth = (int)((1.0f - ((float)pointsEnc.size() / (float)points.size())) * 19.0f) + 1;
         }
 
         // Convert to other triangle object
-        profiler::startBranch(20);
-        profiler::startSection(20, profiler::POST);
+        profiler_mesh::startBranch(20);
+        profiler_mesh::startSection(20, profiler_mesh::POST);
         vector<Triangle> output;
         for(const shared_ptr<TriangleB>& t : trianglesOutput){
             // Omit super triangle
@@ -141,8 +141,8 @@ namespace mesh_blelloch{
                 output.push_back({triangle.i1, triangle.i2, triangle.i3});
             }
         }
-        profiler::stopSection(20, profiler::POST);
-        profiler::stopBranch(20);
+        profiler_mesh::stopSection(20, profiler_mesh::POST);
+        profiler_mesh::stopBranch(20);
         return output;
     }
 

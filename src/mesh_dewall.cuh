@@ -4,7 +4,7 @@
 
 #include "primitive.cuh"
 #include "math.cuh"
-#include "profiler.cuh"
+#include "profiler_mesh.cuh"
 
 #define PARTITION_DIMENSION 100
 #define CELL_SIZE (1.0f / (float)PARTITION_DIMENSION)
@@ -97,7 +97,7 @@ namespace mesh_dewall{
         float edgeCenterY = (points[edgeActive.i1].y + points[edgeActive.i2].y) / 2.0f;
 
         // Traverse the spatial partition of points and attempt to find at least one close, valid point
-        profiler::startSection(depth, profiler::L_FIRST);
+        profiler_mesh::startSection(depth, profiler_mesh::L_FIRST);
         int indexP3 = -1;
         PartitionBounds partitionBounds(0.0f, 0.0f, 0.0f, 0.0f);
         for(float offset = 0.0f; offset <= 1.0f; offset += CELL_SIZE){
@@ -121,11 +121,11 @@ namespace mesh_dewall{
 
             if(indexP3 != -1) break;
         }
-        profiler::stopSection(depth, profiler::L_FIRST);
+        profiler_mesh::stopSection(depth, profiler_mesh::L_FIRST);
 
         // Optimize the existing triangle by searching for better matches inside its circumcircle
         if(indexP3 != -1){
-            profiler::startSection(depth, profiler::L_CIRCLE);
+            profiler_mesh::startSection(depth, profiler_mesh::L_CIRCLE);
 
             PartitionBounds partitionBounds2 = boundsCircumcircle(points[edgeActive.i2], points[edgeActive.i1], points[indexP3]);
             partitionBounds2.constrain(bounds);
@@ -139,7 +139,7 @@ namespace mesh_dewall{
                     }else testPoints(points, partition.partition[x][y], edgeActive, indexP3, bounds);
                 }
             }
-            profiler::stopSection(depth, profiler::L_CIRCLE);
+            profiler_mesh::stopSection(depth, profiler_mesh::L_CIRCLE);
         }
 
         return indexP3;
@@ -148,22 +148,22 @@ namespace mesh_dewall{
     // Algorithm source: https://doi.org/10.1016/S0010-4485(97)00082-1
     vector<Triangle> triangulateRecursive(const vector<Point>& points, const Partition& partition, const Bounds& bounds,
                                           const unordered_set<Edge>& edgesActive, const int& depth){
-        profiler::startBranch(depth);
+        profiler_mesh::startBranch(depth);
 
-        profiler::startSection(depth, profiler::INIT_LISTS);
+        profiler_mesh::startSection(depth, profiler_mesh::INIT_LISTS);
         vector<Triangle> output;
         unordered_set<Edge> edgesActiveWall;
         shared_ptr<unordered_set<Edge>> edgesActive1(nullptr);
         shared_ptr<unordered_set<Edge>> edgesActive2(nullptr);
-        profiler::stopSection(depth, profiler::INIT_LISTS);
+        profiler_mesh::stopSection(depth, profiler_mesh::INIT_LISTS);
 
         // Calculate dividing wall
-        profiler::startSection(depth, profiler::WALL);
+        profiler_mesh::startSection(depth, profiler_mesh::WALL);
         Wall wall = Wall::build(bounds, depth);
-        profiler::stopSection(depth, profiler::WALL);
+        profiler_mesh::stopSection(depth, profiler_mesh::WALL);
 
         // Divide inherited active edges
-        profiler::startSection(depth, profiler::INIT_INHERIT_EDGES);
+        profiler_mesh::startSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
         for(Edge edge : edgesActive){
             if(wall.intersects(points[edge.i1], points[edge.i2])){
                 edgesActiveWall.insert(edge);
@@ -175,7 +175,7 @@ namespace mesh_dewall{
                 edgesActive1->insert(edge);
             }
         }
-        profiler::stopSection(depth, profiler::INIT_INHERIT_EDGES);
+        profiler_mesh::stopSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
 
         // For all active edges, attempt to complete a triangle and update the active edges list
 
@@ -195,12 +195,12 @@ namespace mesh_dewall{
 
             if(indexP3 > -1){ // Check if we've made a new triangle
                 // Add new triangle to output list
-                profiler::startSection(depth, profiler::SAVE);
+                profiler_mesh::startSection(depth, profiler_mesh::SAVE);
                 output.push_back({edge.i1, indexP3, edge.i2});
-                profiler::stopSection(depth, profiler::SAVE);
+                profiler_mesh::stopSection(depth, profiler_mesh::SAVE);
 
                 // Update active edges based on the new triangle
-                profiler::startSection(depth, profiler::CHAIN);
+                profiler_mesh::startSection(depth, profiler_mesh::CHAIN);
                 for(Edge e : vector<Edge>{{indexP3, edge.i2}, {edge.i1, indexP3}}){
                     if(wall.intersects(points[e.i1], points[e.i2])){
                         if(edgesActiveWall.count(e.reverse())){
@@ -225,30 +225,30 @@ namespace mesh_dewall{
                         }
                     }
                 }
-                profiler::stopSection(depth, profiler::CHAIN);
+                profiler_mesh::stopSection(depth, profiler_mesh::CHAIN);
             }
         }
 
-        profiler::stopBranch(depth);
+        profiler_mesh::stopBranch(depth);
 
         // Recursively call delaunay triangulation on both sides of the wall
         if(edgesActive1 != nullptr){
             Bounds bounds1(bounds.xMin, wall.horizontal ? bounds.xMid : bounds.xMax, bounds.yMin, (!wall.horizontal) ? bounds.yMid : bounds.yMax);
             vector<Triangle> triangles = triangulateRecursive(points, partition, bounds1, *edgesActive1, depth + 1);
-            profiler::startBranch(depth);
-            profiler::startSection(depth, profiler::MERGE);
+            profiler_mesh::startBranch(depth);
+            profiler_mesh::startSection(depth, profiler_mesh::MERGE);
             output.insert(output.begin(), triangles.begin(), triangles.end());
-            profiler::stopSection(depth, profiler::MERGE);
-            profiler::stopBranch(depth);
+            profiler_mesh::stopSection(depth, profiler_mesh::MERGE);
+            profiler_mesh::stopBranch(depth);
         }
         if(edgesActive2 != nullptr){
             Bounds bounds2(wall.horizontal ? bounds.xMid : bounds.xMin, bounds.xMax, (!wall.horizontal) ? bounds.yMid : bounds.yMin, bounds.yMax);
             vector<Triangle> triangles = triangulateRecursive(points, partition, bounds2, *edgesActive2, depth + 1);
-            profiler::startBranch(depth);
-            profiler::startSection(depth, profiler::MERGE);
+            profiler_mesh::startBranch(depth);
+            profiler_mesh::startSection(depth, profiler_mesh::MERGE);
             output.insert(output.begin(), triangles.begin(), triangles.end());
-            profiler::stopSection(depth, profiler::MERGE);
-            profiler::stopBranch(depth);
+            profiler_mesh::stopSection(depth, profiler_mesh::MERGE);
+            profiler_mesh::stopBranch(depth);
         }
 
         return output;
@@ -260,26 +260,26 @@ namespace mesh_dewall{
 
         Bounds bounds(0.0f, 1.0f, 0.0f, 1.0f);
 
-        profiler::startBranch(0);
+        profiler_mesh::startBranch(0);
 
         // Calculate dividing wall
-        profiler::startSection(0, profiler::WALL);
+        profiler_mesh::startSection(0, profiler_mesh::WALL);
         Wall wall = Wall::build(bounds, 0);
-        profiler::stopSection(0, profiler::WALL);
+        profiler_mesh::stopSection(0, profiler_mesh::WALL);
 
         // Divide points by wall side
-        profiler::startSection(0, profiler::INIT_DIVIDE_POINTS);
+        profiler_mesh::startSection(0, profiler_mesh::INIT_DIVIDE_POINTS);
         vector<int> indicesLeft, indicesRight;
         for(int i : indices){
             if(wall.side(points[i])) indicesRight.push_back(i);
             else indicesLeft.push_back(i);
         }
-        profiler::stopSection(0, profiler::INIT_DIVIDE_POINTS);
+        profiler_mesh::stopSection(0, profiler_mesh::INIT_DIVIDE_POINTS);
 
         unordered_set<Edge> edgesActive;
 
         // Initialize with first edges
-        profiler::startSection(0, profiler::INIT_FIRST_EDGE);
+        profiler_mesh::startSection(0, profiler_mesh::INIT_FIRST_EDGE);
         // Find nearest point to dividing line (first edge point)
         int aIndex = indices[0];
         float aDistance = wall.distance(points[indices[0]]);
@@ -305,9 +305,9 @@ namespace mesh_dewall{
 
         edgesActive.insert({aIndex, bIndex});
         edgesActive.insert({bIndex, aIndex});
-        profiler::stopSection(0, profiler::INIT_FIRST_EDGE);
+        profiler_mesh::stopSection(0, profiler_mesh::INIT_FIRST_EDGE);
 
-        profiler::stopBranch(0);
+        profiler_mesh::stopBranch(0);
 
         return triangulateRecursive(points, partition, bounds, edgesActive, 0);
     }
