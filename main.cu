@@ -84,7 +84,8 @@ int runCirclesTest(const string& fileName,
     profiler_circles::startProgram(fileName);
     for(int batchPower = 0; batchPower <= 3; batchPower++){
         int batchSizeBase = (int)pow(10, batchPower);
-        for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
+        //for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
+        for(int batchSize = batchSizeBase; batchSize < batchSizeBase * 10; batchSize += batchSizeBase){
 
             cout << "Batch size: " << batchSize << endl;
 
@@ -177,6 +178,7 @@ int main(){
     runCirclesTest("noop", circles_noop::testSpeed, circles_noop::testAccuracy);
     runCirclesTest("serial_pure", circles_serial::testPureSpeed, circles_serial::testPureAccuracy);
     runCirclesTest("serial_regions", circles_serial::testRegionsSpeed, circles_serial::testRegionsAccuracy);
+    runCirclesTest("serial_dist", circles_serial::testDistanceSpeed, circles_serial::testDistanceAccuracy);
     //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDeWall, mesh_dewall::triangulate);
     //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlelloch, mesh_blelloch::triangulate);
 }

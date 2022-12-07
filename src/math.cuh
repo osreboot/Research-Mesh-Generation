@@ -61,3 +61,37 @@ bool isInCircleSlow(const Point& a, const Point& b, const Point& c, const Point&
                b.x - d.x, b.y - d.y, (b.x * b.x - d.x * d.x) + (b.y * b.y - d.y * d.y),
                c.x - d.x, c.y - d.y, (c.x * c.x - d.x * d.x) + (c.y * c.y - d.y * d.y)) <= 0.0;
 }
+
+class Circumcircle{
+
+public:
+    double x, y, r2;
+
+    Circumcircle(const Point& p1, const Point& p2, const Point& p3){
+        // Algorithm source: https://mathworld.wolfram.com/Circumcircle.html
+        double a = dets(p1.x, p1.y,
+                        p2.x, p2.y,
+                        p3.x, p3.y);
+
+        double bx = -dets(p1.x * p1.x + p1.y * p1.y, p1.y,
+                          p2.x * p2.x + p2.y * p2.y, p2.y,
+                          p3.x * p3.x + p3.y * p3.y, p3.y);
+        double by = dets(p1.x * p1.x + p1.y * p1.y, p1.x,
+                         p2.x * p2.x + p2.y * p2.y, p2.x,
+                         p3.x * p3.x + p3.y * p3.y, p3.x);
+
+        double c = -det(p1.x * p1.x + p1.y * p1.y, p1.x, p1.y,
+                        p2.x * p2.x + p2.y * p2.y, p2.x, p2.y,
+                        p3.x * p3.x + p3.y * p3.y, p3.x, p3.y);
+
+        x = -bx / (2.0 * a);
+        y = -by / (2.0 * a);
+
+        r2 = sqrt(bx * bx + by * by - 4.0 * a * c) / (2.0 * abs(a));
+        r2 *= r2;
+    }
+
+    inline bool isInside(const Point& point) const {
+        return ((x - (double)point.x) * (x - (double)point.x) + (y - (double)point.y) * (y - (double)point.y)) <= r2 + 0.0000001;
+    }
+};

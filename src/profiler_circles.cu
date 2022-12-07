@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
-#include <unordered_map>
+#include <map>
 
 #include "profiler_circles.cuh"
 
@@ -21,7 +21,7 @@ namespace profiler_circles{
 
     string fileName;
     Time timeLocalBatch;
-    unordered_map<int, unsigned long long> times;
+    map<int, unsigned long long> times;
 
     void startProgram(const string& fileNameArg){
         fileName = fileNameArg;
@@ -34,11 +34,10 @@ namespace profiler_circles{
             cerr << "Failed to open profile file!" << endl;
         }
 
-        fileProfile << "Batch Size";
         for(const auto& pair : times){
             fileProfile << "," << pair.first;
         }
-        fileProfile << "\nNanoseconds";
+        fileProfile << "\n" << fileName;
         for(const auto& pair : times){
             fileProfile << "," << pair.second;
         }
