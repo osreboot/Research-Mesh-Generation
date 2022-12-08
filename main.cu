@@ -7,6 +7,7 @@
 #include "src/primitive.cuh"
 #include "src/circles_noop.cuh"
 #include "src/circles_serial.cuh"
+#include "src/circles_parallel.cuh"
 #include "src/mesh_dewall.cuh"
 #include "src/mesh_blelloch.cuh"
 #include "src/profiler_circles.cuh"
@@ -84,8 +85,8 @@ int runCirclesTest(const string& fileName,
     profiler_circles::startProgram(fileName);
     for(int batchPower = 0; batchPower <= 3; batchPower++){
         int batchSizeBase = (int)pow(10, batchPower);
-        //for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
-        for(int batchSize = batchSizeBase; batchSize < batchSizeBase * 10; batchSize += batchSizeBase){
+        for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
+        //for(int batchSize = batchSizeBase; batchSize < batchSizeBase * 10; batchSize += batchSizeBase){
 
             cout << "Batch size: " << batchSize << endl;
 
@@ -103,36 +104,13 @@ int runCirclesTest(const string& fileName,
                 vector<bool> outputTest = funcTestAccuracy(points, triangles[t], offsets[t], batchSize);
                 vector<bool> outputReference = circles_serial::testPureAccuracy(points, triangles[t], offsets[t], batchSize);
                 for(int i = 0; i < outputReference.size(); i++){
-                    if(outputTest[i] != outputReference[i]){
-                        //cout <<
-                        //points[triangles[t].i1].x << "," << points[triangles[t].i1].y << " " <<
-                        //points[triangles[t].i2].x << "," << points[triangles[t].i2].y << " " <<
-                        //points[triangles[t].i3].x << "," << points[triangles[t].i3].y << " " <<
-                        //points[(offsets[t] + i) % points.size()].x << "," << points[(offsets[t] + i) % points.size()].y << " " << endl;
-                        errors++;
-                    }
+                    if(outputTest[i] != outputReference[i]) errors++;
                 }
             }
             if(errors > 0) cerr << "Failed " << errors << " accuracy tests!" << endl;
         }
     }
     profiler_circles::stopProgram();
-
-    // Run circumcircle test
-    //cout << "Starting circumcircle test..." << endl;
-    //profiler_mesh::startProgram(profiler_mesh::sectionsCircleLinear);
-    //for(int b = 0; b < 1000; b += 100){
-    //    profiler_mesh::startBranch(b / 100);
-    //    for(int s = 0; s < points.size() - b; s += 100){
-    //        profiler_mesh::startSection(b / 100, profiler_mesh::INIT);
-    //        for(int i = 0; i < (points.size() / 10); i += 3){
-    //            func(points, s, s + b, i);
-    //        }
-    //        profiler_mesh::stopSection(b / 100, profiler_mesh::INIT);
-    //    }
-    //    profiler_mesh::stopBranch(b / 100);
-    //}
-    //profiler_mesh::stopProgram();
 
     return 0;
 }
@@ -176,9 +154,10 @@ int runMeshGeneration(const string& fileName, const vector<profiler_mesh::Sectio
 
 int main(){
     runCirclesTest("noop", circles_noop::testSpeed, circles_noop::testAccuracy);
-    runCirclesTest("serial_pure", circles_serial::testPureSpeed, circles_serial::testPureAccuracy);
-    runCirclesTest("serial_regions", circles_serial::testRegionsSpeed, circles_serial::testRegionsAccuracy);
-    runCirclesTest("serial_dist", circles_serial::testDistanceSpeed, circles_serial::testDistanceAccuracy);
+    //runCirclesTest("serial_pure", circles_serial::testPureSpeed, circles_serial::testPureAccuracy);
+    //runCirclesTest("serial_regions", circles_serial::testRegionsSpeed, circles_serial::testRegionsAccuracy);
+    //runCirclesTest("serial_dist", circles_serial::testDistanceSpeed, circles_serial::testDistanceAccuracy);
+    runCirclesTest("parallel", circles_parallel::testSpeed, circles_parallel::testAccuracy);
     //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDeWall, mesh_dewall::triangulate);
     //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlelloch, mesh_blelloch::triangulate);
 }

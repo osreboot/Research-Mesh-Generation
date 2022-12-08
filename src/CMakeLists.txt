@@ -3,6 +3,7 @@ list(APPEND SOURCE_FILES
         "math.cuh"
         "circles_noop.cuh"
         "circles_serial.cuh"
+        "circles_parallel.cuh"
         "mesh_dewall.cuh"
         "mesh_blelloch.cuh"
         "profiler_circles.cuh"
