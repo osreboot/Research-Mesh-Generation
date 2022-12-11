@@ -5,9 +5,13 @@
 #include <functional>
 
 #include "src/primitive.cuh"
-#include "src/circles_noop.cuh"
-#include "src/circles_serial.cuh"
-#include "src/circles_parallel.cuh"
+#include "src/circles.cu"
+#include "src/circles_serial_noop.cu"
+#include "src/circles_serial_pure.cu"
+#include "src/circles_serial_regions.cu"
+#include "src/circles_serial_distance.cu"
+#include "src/circles_parallel_kernel_pure.cu"
+#include "src/circles_parallel_kernel_distance.cu"
 #include "src/mesh_dewall.cuh"
 #include "src/mesh_blelloch.cuh"
 #include "src/profiler_circles.cuh"
@@ -45,9 +49,7 @@ void saveTriangles(const unordered_set<Triangle>& triangles){
     fileConnections.close();
 }
 
-int runCirclesTest(const string& fileName,
-                   const function<void(const vector<Point>&, const Triangle&, const int&, const int&)>& funcTestSpeed,
-                   const function<vector<bool>(const vector<Point>&, const Triangle&, const int&, const int&)>& funcTestAccuracy){
+int runCirclesTest(const shared_ptr<Circles>& circles){
     // Seed the random so we get the same sequence of triangles across multiple tests
     srand(69420);
 
@@ -81,33 +83,52 @@ int runCirclesTest(const string& fileName,
         offsets.push_back(rand() % points.size());
     }
 
+    CirclesSerialPure circlesRef;
+
     cout << "Running circumcircle tests..." << endl;
-    profiler_circles::startProgram(fileName);
-    for(int batchPower = 0; batchPower <= 3; batchPower++){
+    profiler_circles::startProgram(circles->getFileName());
+    //for(int batchSize = 16; batchSize < 3000000; batchSize *= 2){
+    for(int batchPower = 0; batchPower <= 6; batchPower++){
         int batchSizeBase = (int)pow(10, batchPower);
         for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
         //for(int batchSize = batchSizeBase; batchSize < batchSizeBase * 10; batchSize += batchSizeBase){
 
             cout << "Batch size: " << batchSize << endl;
+            profiler_circles::initializeBatch(batchSize);
 
-            // Run circumcircle speed test
-
-            profiler_circles::startBatch(batchSize);
-            for(int t = 0; t < triangles.size(); t++){
-                funcTestSpeed(points, triangles[t], offsets[t], batchSize);
-            }
-            profiler_circles::stopBatch(batchSize);
-
-            // Run circumcircle accuracy test
             int errors = 0;
             for(int t = 0; t < triangles.size(); t++){
-                vector<bool> outputTest = funcTestAccuracy(points, triangles[t], offsets[t], batchSize);
-                vector<bool> outputReference = circles_serial::testPureAccuracy(points, triangles[t], offsets[t], batchSize);
-                for(int i = 0; i < outputReference.size(); i++){
-                    if(outputTest[i] != outputReference[i]) errors++;
+
+                auto *batchPoints = new Point[batchSize];
+                for(int i = 0; i < batchSize; i++){
+                    batchPoints[i] = points[(offsets[t] + i) % points.size()];
                 }
+                circles->initialize(batchPoints, batchSize);
+                circlesRef.initialize(batchPoints, batchSize);
+
+                // Run circumcircle test
+                auto *batchOutput = new bool[batchSize];
+                profiler_circles::startBatch(batchSize);
+                circles->run(batchOutput, points[triangles[t].i1], points[triangles[t].i2], points[triangles[t].i3]);
+                profiler_circles::stopBatch(batchSize);
+
+                // Run reference
+                auto *batchOutputRef = new bool[batchSize];
+                circlesRef.run(batchOutputRef, points[triangles[t].i1], points[triangles[t].i2], points[triangles[t].i3]);
+
+                for(int i = 0; i < batchSize; i++){
+                    if(batchOutput[i] != batchOutputRef[i]) errors++;
+                }
+
+                circles->cleanup();
+                circlesRef.cleanup();
+
+                delete[] batchPoints;
+                delete[] batchOutput;
+                delete[] batchOutputRef;
             }
-            if(errors > 0) cerr << "Failed " << errors << " accuracy tests!" << endl;
+
+            if(errors > 0) cout << "ERROR: Failed " << errors << " accuracy tests! (" << ((float)errors / (float)(triangles.size() * batchSize)) * 100.0f << "%)" << endl;
         }
     }
     profiler_circles::stopProgram();
@@ -143,7 +164,7 @@ int runMeshGeneration(const string& fileName, const vector<profiler_mesh::Sectio
         if(triangles.count(triangleOutput)) duplicates++;
         triangles.insert(triangleOutput);
     }
-    if(duplicates > 0) cerr << "Generated " << duplicates << " duplicate triangle(s)!" << endl;
+    if(duplicates > 0) cout << "ERROR: Generated " << duplicates << " duplicate triangle(s)!" << endl;
 
     // Write triangles to file
     cout << "Writing triangles to file..." << endl;
@@ -153,11 +174,13 @@ int runMeshGeneration(const string& fileName, const vector<profiler_mesh::Sectio
 }
 
 int main(){
-    runCirclesTest("noop", circles_noop::testSpeed, circles_noop::testAccuracy);
-    //runCirclesTest("serial_pure", circles_serial::testPureSpeed, circles_serial::testPureAccuracy);
-    //runCirclesTest("serial_regions", circles_serial::testRegionsSpeed, circles_serial::testRegionsAccuracy);
-    //runCirclesTest("serial_dist", circles_serial::testDistanceSpeed, circles_serial::testDistanceAccuracy);
-    runCirclesTest("parallel", circles_parallel::testSpeed, circles_parallel::testAccuracy);
+    //runCirclesTest(make_shared<CirclesNoop>());
+    //runCirclesTest(make_shared<CirclesSerialPure>());
+    //runCirclesTest(make_shared<CirclesSerialRegions>());
+    //runCirclesTest(make_shared<CirclesSerialDistance>());
+    runCirclesTest(make_shared<CirclesParallelKernelPure>());
+    runCirclesTest(make_shared<CirclesParallelKernelDistance>());
+
     //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDeWall, mesh_dewall::triangulate);
     //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlelloch, mesh_blelloch::triangulate);
 }

@@ -44,8 +44,11 @@ namespace profiler_circles{
         fileProfile.close();
     }
 
-    void startBatch(int size){
+    void initializeBatch(int size){
         times[size] = 0;
+    }
+
+    void startBatch(int size){
         timeLocalBatch = now();
     }
 

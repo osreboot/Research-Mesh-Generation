@@ -11,8 +11,12 @@ int hashPair(int i1, int i2){
 }
 
 struct Point{
-    float x, y;
+    double x, y;
 };
+
+ostream& operator<<(ostream &ostr, const Point& p){
+    return ostr << "(" << p.x << "," << p.y << ")";
+}
 
 struct Edge{
     int i1, i2;

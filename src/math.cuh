@@ -7,15 +7,15 @@
 
 using namespace std;
 
-inline double det(double a, double b, double c, double d, double e, double f, double g, double h, double i){
+__host__ __device__ inline double det(double a, double b, double c, double d, double e, double f, double g, double h, double i){
     return (a * e * i) + (b * f * g) + (c * d * h) - (c * e * g) - (b * d * i) - (a * f * h);
 }
 
-inline double dets(double a, double b, double d, double e, double g, double h){
+__host__ __device__ inline double dets(double a, double b, double d, double e, double g, double h){
     return (a * e) + (b * g) + (d * h) - (e * g) - (b * d) - (a * h);
 }
 
-inline float distance(const Point& a, const Point& b){
+__host__ __device__ inline double distance(const Point& a, const Point& b){
     return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
@@ -64,12 +64,16 @@ bool isInCircleRegions(const Point& a, const Point& b, const Point& c, const Poi
                c.x - d.x, c.y - d.y, (c.x * c.x - d.x * d.x) + (c.y * c.y - d.y * d.y)) <= 0.0;
 }
 
+__host__ __device__ __inline__ bool isInside(const Point& point, const double x, const double y, const double r2){
+    return ((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y)) <= r2 + 0.0000001;
+}
+
 class Circumcircle{
 
 public:
     double x, y, r2;
 
-    Circumcircle(const Point& p1, const Point& p2, const Point& p3){
+    __host__ __device__ Circumcircle(const Point& p1, const Point& p2, const Point& p3){
         // Algorithm source: https://mathworld.wolfram.com/Circumcircle.html
         double a = dets(p1.x, p1.y,
                         p2.x, p2.y,
@@ -93,7 +97,7 @@ public:
         r2 *= r2;
     }
 
-    inline bool isInside(const Point& point) const {
-        return ((x - (double)point.x) * (x - (double)point.x) + (y - (double)point.y) * (y - (double)point.y)) <= r2 + 0.0000001;
+    __host__ __device__ __inline__ bool isInside(const Point& point) const {
+        return ((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y)) <= r2 + 0.0000001;
     }
 };
