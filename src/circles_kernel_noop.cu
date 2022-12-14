@@ -2,15 +2,13 @@
 
 #include "math.cuh"
 
-__global__ void circlesPure(bool *out, const Point* __restrict__ points, const Point p1, const Point p2, const Point p3, int pointsSize, int threads){
+__global__ void circlesNoop(bool *out, const Point* __restrict__ points, const Point p1, const Point p2, const Point p3, int pointsSize, int threads){
     for(int i = blockDim.x * blockIdx.x + threadIdx.x; i < pointsSize; i += threads){
-        out[i] = det(p1.x - points[i].x, p1.y - points[i].y, (p1.x * p1.x - points[i].x * points[i].x) + (p1.y * p1.y - points[i].y * points[i].y),
-                     p2.x - points[i].x, p2.y - points[i].y, (p2.x * p2.x - points[i].x * points[i].x) + (p2.y * p2.y - points[i].y * points[i].y),
-                     p3.x - points[i].x, p3.y - points[i].y, (p3.x * p3.x - points[i].x * points[i].x) + (p3.y * p3.y - points[i].y * points[i].y)) <= 0.00000001;
+        out[i] = false;
     }
 }
 
-class CirclesParallelKernelPure : public Circles{
+class CirclesKernelNoop : public Circles{
 
 private:
     const Point *points = nullptr;
@@ -31,10 +29,10 @@ public:
 
         cudaMalloc((void**)&doutput, sizeof(bool) * pointsSize);
 
-        const int threads = 512;
-        const int blocks = 512 * 512;
+        const int threads = 128;
+        const int blocks = 128 * 128;
 
-        circlesPure<<<blocks,threads>>>(doutput, dpoints, p1, p2, p3, pointsSize, threads * blocks);
+        circlesNoop<<<blocks,threads>>>(doutput, dpoints, p1, p2, p3, pointsSize, threads * blocks);
         cudaError_t err = cudaGetLastError();
         if(err != cudaSuccess) cout << "ERROR (CUDA): " << cudaGetErrorString(err) << endl;
 
@@ -50,7 +48,7 @@ public:
     }
 
     string getFileName() const override {
-        return "parallel_kernel_pure";
+        return "kernel_noop";
     }
 
 };

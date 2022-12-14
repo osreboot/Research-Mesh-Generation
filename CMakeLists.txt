@@ -11,4 +11,5 @@ add_subdirectory(src)
 add_executable(MeshGeneration ${SOURCE_FILES})
 
 set_target_properties(MeshGeneration PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON)
+        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_ARCHITECTURES 75)

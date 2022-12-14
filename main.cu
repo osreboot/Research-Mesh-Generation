@@ -1,3 +1,5 @@
+#pragma comment(lib, "cublas.lib")
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -8,10 +10,17 @@
 #include "src/circles.cu"
 #include "src/circles_serial_noop.cu"
 #include "src/circles_serial_pure.cu"
+#include "src/circles_serial_disjoint.cu"
 #include "src/circles_serial_regions.cu"
 #include "src/circles_serial_distance.cu"
-#include "src/circles_parallel_kernel_pure.cu"
-#include "src/circles_parallel_kernel_distance.cu"
+#include "src/circles_serial_shotgun.cu"
+#include "src/circles_kernel_noop.cu"
+#include "src/circles_kernel_pure.cu"
+#include "src/circles_kernel_distance.cu"
+#include "src/circles_kernel_shotgun.cu"
+#include "src/circles_tensor_distance.cu"
+#include "src/circles_tensor_disjoint.cu"
+#include "src/circles_tensor_shotgun.cu"
 #include "src/mesh_dewall.cuh"
 #include "src/mesh_blelloch.cuh"
 #include "src/profiler_circles.cuh"
@@ -85,10 +94,10 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
 
     CirclesSerialPure circlesRef;
 
-    cout << "Running circumcircle tests..." << endl;
+    cout << "Running circumcircle tests (" << circles->getFileName() << ")..." << endl;
     profiler_circles::startProgram(circles->getFileName());
     //for(int batchSize = 16; batchSize < 3000000; batchSize *= 2){
-    for(int batchPower = 0; batchPower <= 6; batchPower++){
+    for(int batchPower = 0; batchPower <= 5; batchPower++){
         int batchSizeBase = (int)pow(10, batchPower);
         for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
         //for(int batchSize = batchSizeBase; batchSize < batchSizeBase * 10; batchSize += batchSizeBase){
@@ -176,10 +185,17 @@ int runMeshGeneration(const string& fileName, const vector<profiler_mesh::Sectio
 int main(){
     //runCirclesTest(make_shared<CirclesNoop>());
     //runCirclesTest(make_shared<CirclesSerialPure>());
+    //runCirclesTest(make_shared<CirclesSerialDisjoint>());
     //runCirclesTest(make_shared<CirclesSerialRegions>());
     //runCirclesTest(make_shared<CirclesSerialDistance>());
-    runCirclesTest(make_shared<CirclesParallelKernelPure>());
-    runCirclesTest(make_shared<CirclesParallelKernelDistance>());
+    //runCirclesTest(make_shared<CirclesSerialShotgun>());
+    //runCirclesTest(make_shared<CirclesKernelNoop>());
+    //runCirclesTest(make_shared<CirclesKernelPure>());
+    //runCirclesTest(make_shared<CirclesKernelDistance>());
+    //runCirclesTest(make_shared<CirclesKernelShotgun>());
+    //runCirclesTest(make_shared<CirclesTensorDistance>());
+    //runCirclesTest(make_shared<CirclesTensorDisjoint>());
+    runCirclesTest(make_shared<CirclesTensorShotgun>());
 
     //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDeWall, mesh_dewall::triangulate);
     //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlelloch, mesh_blelloch::triangulate);

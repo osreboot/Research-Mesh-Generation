@@ -8,7 +8,7 @@ __global__ void circlesDistance(bool *out, const Point* __restrict__ points, con
     }
 }
 
-class CirclesParallelKernelDistance : public Circles{
+class CirclesKernelDistance : public Circles{
 
 private:
     const Point *points = nullptr;
@@ -29,8 +29,8 @@ public:
 
         cudaMalloc((void**)&doutput, sizeof(bool) * pointsSize);
 
-        const int threads = 512;
-        const int blocks = 512 * 512;
+        const int threads = 128;
+        const int blocks = 128 * 128;
 
         const Circumcircle circle(p1, p2, p3);
         circlesDistance<<<blocks,threads>>>(doutput, dpoints, circle, pointsSize, threads * blocks);
@@ -49,7 +49,7 @@ public:
     }
 
     string getFileName() const override {
-        return "parallel_kernel_distance";
+        return "kernel_distance";
     }
 
 };
