@@ -19,6 +19,10 @@ __host__ __device__ inline double distance(const Point& a, const Point& b){
     return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
+__host__ __device__ inline double distance(const double px1, const double py1, const double px2, const double py2){
+    return sqrt((px1 - px2) * (px1 - px2) + (py1 - py2) * (py1 - py2));
+}
+
 inline bool isClockwise(Point a, Point b, Point c){
     return 1.0 * a.x * b.y + 1.0 * a.y * c.x + 1.0 * b.x * c.y -
            1.0 * b.y * c.x - 1.0 * a.y * b.x - 1.0 * a.x * c.y < 0.0;
@@ -99,5 +103,9 @@ public:
 
     __host__ __device__ __inline__ bool isInside(const Point& point) const {
         return ((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y)) <= r2 + 0.0000001;
+    }
+
+    __host__ __device__ __inline__ bool isInside(const double px, const double py) const {
+        return ((x - px) * (x - px) + (y - py) * (y - py)) <= r2 + 0.0000001;
     }
 };

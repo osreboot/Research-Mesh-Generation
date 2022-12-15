@@ -11,7 +11,7 @@
 
 using namespace std;
 
-namespace mesh_dewall{
+namespace mesh_dewall_old{
 
     class PartitionBounds{
 

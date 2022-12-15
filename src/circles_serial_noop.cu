@@ -3,12 +3,13 @@
 class CirclesNoop : public Circles{
 
 private:
-    const Point* points = nullptr;
+    const double *px = nullptr, *py = nullptr;
     int pointsSize = 0;
 
 public:
-    void initialize(const Point *pointsArg, int pointsSizeArg) override {
-        points = pointsArg;
+    void initialize(const double *pxArg, const double *pyArg, int pointsSizeArg) override {
+        px = pxArg;
+        py = pyArg;
         pointsSize = pointsSizeArg;
     }
 

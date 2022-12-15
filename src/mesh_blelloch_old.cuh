@@ -9,7 +9,7 @@
 
 using namespace std;
 
-namespace mesh_blelloch{
+namespace mesh_blelloch_old{
 
     class TriangleB{
 

@@ -16,6 +16,9 @@ namespace profiler_mesh{
         INIT_INHERIT_EDGES,
         L_FIRST,
         L_CIRCLE,
+        LOCATE,
+        DIVIDE_POINTS,
+        FIRST_EDGE,
         PREP,
         REPLACE,
         SAVE,
@@ -39,6 +42,9 @@ namespace profiler_mesh{
             case INIT_INHERIT_EDGES: return ostr << "INIT_INHERIT_EDGES";
             case L_FIRST: return ostr << "L_FIRST";
             case L_CIRCLE: return ostr << "L_CIRCLE";
+            case LOCATE: return ostr << "LOCATE";
+            case DIVIDE_POINTS: return ostr << "DIVIDE_POINTS";
+            case FIRST_EDGE: return ostr << "FIRST_EDGE";
             case PREP: return ostr << "PREP";
             case REPLACE: return ostr << "REPLACE";
             case SAVE: return ostr << "SAVE";

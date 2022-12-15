@@ -5,12 +5,12 @@
 #include <sstream>
 #include <unordered_set>
 #include <functional>
+#include <assert.h>
 
 #include "src/primitive.cuh"
 #include "src/circles.cu"
 #include "src/circles_serial_noop.cu"
 #include "src/circles_serial_pure.cu"
-#include "src/circles_serial_disjoint.cu"
 #include "src/circles_serial_regions.cu"
 #include "src/circles_serial_distance.cu"
 #include "src/circles_serial_shotgun.cu"
@@ -19,10 +19,11 @@
 #include "src/circles_kernel_distance.cu"
 #include "src/circles_kernel_shotgun.cu"
 #include "src/circles_tensor_distance.cu"
-#include "src/circles_tensor_disjoint.cu"
 #include "src/circles_tensor_shotgun.cu"
-#include "src/mesh_dewall.cuh"
-#include "src/mesh_blelloch.cuh"
+#include "src/mesh.cu"
+#include "src/mesh_dewall.cu"
+#include "src/mesh_dewall_old.cuh"
+#include "src/mesh_blelloch_old.cuh"
 #include "src/profiler_circles.cuh"
 #include "src/profiler_circles.cu"
 #include "src/profiler_mesh.cuh"
@@ -65,12 +66,11 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
     // Load points from file
     cout << "Loading points from file..." << endl;
     vector<Point> points = loadPoints();
-
-    // Pre-process input data
-    cout << "Indexing input points..." << endl;
-    vector<int> indices;
+    auto *px = new double[points.size()];
+    auto *py = new double[points.size()];
     for(int i = 0; i < points.size(); i++){
-        indices.push_back(i);
+        px[i] = points[i].x;
+        py[i] = points[i].y;
     }
 
     // Create triangles
@@ -112,8 +112,8 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
                 for(int i = 0; i < batchSize; i++){
                     batchPoints[i] = points[(offsets[t] + i) % points.size()];
                 }
-                circles->initialize(batchPoints, batchSize);
-                circlesRef.initialize(batchPoints, batchSize);
+                circles->initialize(px, py, batchSize);
+                circlesRef.initialize(px, py, batchSize);
 
                 // Run circumcircle test
                 auto *batchOutput = new bool[batchSize];
@@ -142,34 +142,42 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
     }
     profiler_circles::stopProgram();
 
+    delete[] px;
+    delete[] py;
+
     return 0;
 }
 
-int runMeshGeneration(const string& fileName, const vector<profiler_mesh::Section>& profilerSections,
-                      const function<vector<Triangle>(const vector<Point>&, const vector<int>&)>& func){
+int runMeshGeneration(const shared_ptr<Mesh>& mesh){
+        //const string& fileName, const vector<profiler_mesh::Section>& profilerSections,
+        //              const function<vector<Triangle>(const vector<Point>&, const vector<int>&)>& func){
     // Load points from file
     cout << "Loading points from file..." << endl;
     vector<Point> points = loadPoints();
-
-    // Pre-process input data
-    cout << "Indexing input points..." << endl;
-    vector<int> indices;
+    auto *px = new double[points.size()];
+    auto *py = new double[points.size()];
     for(int i = 0; i < points.size(); i++){
-        indices.push_back(i);
+        px[i] = points[i].x;
+        py[i] = points[i].y;
     }
 
+    auto *connections = new Triangle[2 * points.size() - 4];
+    int connectionsSize = 0;
+
     // Run delaunay triangulation
-    cout << "Starting triangulation..." << endl;
-    profiler_mesh::startProgram(fileName, profilerSections);
-    vector<Triangle> connections = func(points, indices);
+    cout << "Starting triangulation (" << mesh->getFileName() << ")..." << endl;
+    profiler_mesh::startProgram(mesh->getFileName(), mesh->getProfilerSections());
+    mesh->run(connections, connectionsSize, px, py, points.size());
     profiler_mesh::stopProgram();
 
     // Post-process output data
     cout << "Verifying output triangles..." << endl;
+    assert(connectionsSize <= 2 * points.size() - 4);
     unordered_set<Triangle> triangles;
+    triangles.reserve(connectionsSize);
     int duplicates = 0;
-    for(Triangle triangle : connections){
-        Triangle triangleOutput = makeSequential(points, {triangle.i1, triangle.i2, triangle.i3});
+    for(int i = 0; i < connectionsSize; i++){
+        Triangle triangleOutput = makeSequential(points, {connections[i].i1, connections[i].i2, connections[i].i3});
         if(triangles.count(triangleOutput)) duplicates++;
         triangles.insert(triangleOutput);
     }
@@ -178,6 +186,11 @@ int runMeshGeneration(const string& fileName, const vector<profiler_mesh::Sectio
     // Write triangles to file
     cout << "Writing triangles to file..." << endl;
     saveTriangles(triangles);
+
+    delete[] connections;
+
+    delete[] px;
+    delete[] py;
 
     return 0;
 }
@@ -195,8 +208,9 @@ int main(){
     //runCirclesTest(make_shared<CirclesKernelShotgun>());
     //runCirclesTest(make_shared<CirclesTensorDistance>());
     //runCirclesTest(make_shared<CirclesTensorDisjoint>());
-    runCirclesTest(make_shared<CirclesTensorShotgun>());
+    //runCirclesTest(make_shared<CirclesTensorShotgun>());
 
+    return runMeshGeneration(make_shared<MeshDewall>());
     //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDeWall, mesh_dewall::triangulate);
     //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlelloch, mesh_blelloch::triangulate);
 }

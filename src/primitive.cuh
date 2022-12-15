@@ -55,9 +55,9 @@ struct hash<Triangle>{
 class Bounds{
 
 public:
-    float xMin, xMid, xMax, yMin, yMid, yMax;
+    double xMin, xMid, xMax, yMin, yMid, yMax;
 
-    Bounds(float xMinArg, float xMaxArg, float yMinArg, float yMaxArg){
+    Bounds(double xMinArg, double xMaxArg, double yMinArg, double yMaxArg){
         xMin = xMinArg;
         xMid = (xMinArg + xMaxArg) / 2.0f;
         xMax = xMaxArg;
@@ -79,17 +79,29 @@ struct Wall{
     }
 
     const bool horizontal;
-    const float locationDivider;
+    const double locationDivider;
 
-    float distance(const Point& point) const {
+    double distance(const Point& point) const {
         return horizontal ? abs(locationDivider - point.x) : abs(locationDivider - point.y);
+    }
+
+    double distance(const double px, const double py) const {
+        return horizontal ? abs(locationDivider - px) : abs(locationDivider - py);
     }
 
     bool side(const Point& point) const {
         return horizontal ? point.x >= locationDivider : point.y >= locationDivider;
     }
 
+    bool side(const double px, const double py) const {
+        return horizontal ? px >= locationDivider : py >= locationDivider;
+    }
+
     bool intersects(const Point& point1, const Point& point2) const {
         return side(point1) != side(point2);
+    }
+
+    bool intersects(const double px1, const double py1, const double px2, const double py2) const {
+        return side(px1, py1) != side(px2, py2);
     }
 };

@@ -1,8 +1,6 @@
-#pragma once
-
-#include <mma.h>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+
 #include "math.cuh"
 
 #define CUDA_CHECK(err)                                                                            \
@@ -23,8 +21,10 @@
         }                                                                                          \
     } while (0)
 
-__global__ void circlesAssignOutput(bool *out, const float* d_D, const double* __restrict__ dpxy2, const double comp, int pointsSize, int threads){
-    for(int i = blockDim.x * blockIdx.x + threadIdx.x; i < pointsSize; i += threads * blockDim.x){
+__global__ void circlesAssignOutput(bool *out, const float* __restrict__ d_D, const double* __restrict__ dpxy2,
+                                    const double comp, const int pointsSize, const int step){
+    unsigned int i = (blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.x * gridDim.y) * blockDim.x + threadIdx.x;
+    for(; i < pointsSize; i += step){
         out[i] = (double)d_D[i] + dpxy2[i] <= comp;
     }
 }
@@ -42,13 +42,19 @@ private:
     float *d_A = nullptr, *d_B = nullptr, *d_C = nullptr;
 
 public:
-    __host__ void initialize(const Point *pointsArg, int pointsSizeArg) override {
+    __host__ void initialize(const double *pxArg, const double *pyArg, int pointsSizeArg) override {
         pointsSize = pointsSizeArg;
 
-        m = 256;
-        n = 256;
-        k = 256;
-        while(m * k < pointsSize) m *= 2;
+        cudaDeviceReset();
+
+        m = 16;
+        n = 16;
+        k = 16;
+        while(n * m < pointsSize){
+            m *= 2;
+            n *= 2;
+            k *= 2;
+        }
         //cout << "Initialized N to: " << n << endl;
 
         // n -> minimum 64, ideally 256
@@ -59,13 +65,12 @@ public:
 
         for(int i = 0; i < m * k; i++){
             if(i < pointsSize){
-                px[i] = (float)pointsArg[i].x;
-                py[i] = (float)pointsArg[i].y;
-                pxy2[i] = pointsArg[i].x * pointsArg[i].x + pointsArg[i].y * pointsArg[i].y;
+                px[i] = (float)pxArg[i];
+                py[i] = (float)pyArg[i];
+                pxy2[i] = pxArg[i] * pxArg[i] + pyArg[i] * pyArg[i];
             }else{
                 px[i] = 0.0f;
                 py[i] = 0.0f;
-                pxy2[i] = 0.0;
             }
         }
 
@@ -76,21 +81,23 @@ public:
             }
         }
 
-        CUBLAS_CHECK(cublasCreate(&handle));
-        CUBLAS_CHECK(cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH));
+        //CUBLAS_CHECK(cublasCreate(&handle));
+        //CUBLAS_CHECK(cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH));
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_A), m * k * sizeof(d_A[0])));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_B), k * n * sizeof(d_B[0])));
+        //CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_A), m * k * sizeof(d_A[0])));
+        //CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_B), k * n * sizeof(d_B[0])));
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_C), m * n * sizeof(d_C[0])));
 
-        CUBLAS_CHECK(cublasSetVector(m * k, sizeof(px[0]), px, 1, d_A, 1));
-        CUBLAS_CHECK(cublasSetVector(k * n, sizeof(ident[0]), ident, 1, d_B, 1));
+        //CUBLAS_CHECK(cublasSetVector(m * k, sizeof(px[0]), px, 1, d_A, 1));
+        //CUBLAS_CHECK(cublasSetVector(k * n, sizeof(ident[0]), ident, 1, d_B, 1));
         CUBLAS_CHECK(cublasSetVector(n * m, sizeof(py[0]), py, 1, d_C, 1));
 
         CUDA_CHECK(cudaMalloc((void**)&dpxy2, sizeof(double) * pointsSize));
         CUDA_CHECK(cudaMemcpy(dpxy2, pxy2, sizeof(double) * pointsSize, cudaMemcpyHostToDevice));
 
         CUDA_CHECK(cudaMalloc((void**)&doutput, sizeof(bool) * pointsSize));
+
+        cudaDeviceSynchronize();
     }
 
     __host__ void run(bool *output, const Point& p1, const Point& p2, const Point& p3) const override {
@@ -101,12 +108,12 @@ public:
 
         //cout << "cpx:  " << coefPx << "  cpy:  " << coefPy << endl;
 
-        CUBLAS_CHECK(cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, &coefPx,
+        /*CUBLAS_CHECK(cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, &coefPx,
                                   d_A, CUDA_R_32F, k,
                                   d_B, CUDA_R_32F, n, &coefPy,
                                   d_C, CUDA_R_32F, n,
                                   CUDA_R_32F,
-                                  CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+                                  CUBLAS_GEMM_DEFAULT_TENSOR_OP));*/
 
 
         //CUBLAS_CHECK(cublasGetVector(n * n, sizeof(h_D[0]), d_C, 1, h_D, 1));
@@ -125,14 +132,18 @@ public:
         //    output[i] = (double)h_D[i] + pxy2[i] <= comp;
         //}
 
-        const int dim = min(max((int)ceil((sqrt((float)pointsSize)) / 32.0f) * 32, 32), 768);
+        dim3 dimGrid(84, 4, 1);
+        dim3 dimBlock(32, 1, 1);
+        const int step = dimGrid.x * dimGrid.y * dimGrid.z * dimBlock.x;
 
-        circlesAssignOutput<<<dim, dim>>>(doutput, d_C, dpxy2, comp, pointsSize, dim);
+        circlesAssignOutput<<<dimGrid, dimBlock>>>(doutput, d_C, dpxy2, comp, pointsSize, step);
         CUDA_CHECK(cudaMemcpy(output, doutput, sizeof(bool) * pointsSize, cudaMemcpyDeviceToHost));
+
+        cudaDeviceSynchronize();
     }
 
     __host__ void cleanup() override {
-        CUBLAS_CHECK(cublasDestroy(handle));
+        //CUBLAS_CHECK(cublasDestroy(handle));
 
         cudaFree(d_A);
         cudaFree(d_B);
@@ -145,6 +156,8 @@ public:
         delete[] py;
         delete[] pxy2;
         delete[] ident;
+
+        cudaDeviceSynchronize();
     }
 
     string getFileName() const override {

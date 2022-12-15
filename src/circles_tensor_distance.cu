@@ -1,8 +1,6 @@
-#pragma once
-
-#include <mma.h>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+
 #include "math.cuh"
 
 #define N (512)
@@ -29,20 +27,19 @@
 class CirclesTensorDistance : public Circles{
 
 private:
-    const Point *points = nullptr;
+    const double *px = nullptr, *py = nullptr;
     int pointsSize = 0;
 
     cublasHandle_t handle;
 
 public:
-    __host__ void initialize(const Point *pointsArg, int pointsSizeArg) override {
-        points = pointsArg;
+    __host__ void initialize(const double *pxArg, const double *pyArg, int pointsSizeArg) override {
+        px = pxArg;
+        py = pyArg;
         pointsSize = pointsSizeArg;
 
         CUBLAS_CHECK(cublasCreate(&handle));
         CUBLAS_CHECK(cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH));
-
-
     }
 
     __host__ void run(bool *output, const Point& p1, const Point& p2, const Point& p3) const override {

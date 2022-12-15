@@ -3,21 +3,20 @@
 class CirclesSerialShotgun : public Circles{
 
 private:
-    double *px = nullptr, *py = nullptr, *pxy2 = nullptr;
+    const double *px = nullptr, *py = nullptr;
+    double *pxy2 = nullptr;
     int pointsSize = 0;
 
 public:
-    void initialize(const Point *pointsArg, int pointsSizeArg) override {
+    void initialize(const double *pxArg, const double *pyArg, int pointsSizeArg) override {
+        px = pxArg;
+        py = pyArg;
         pointsSize = pointsSizeArg;
 
-        px = new double[pointsSizeArg];
-        py = new double[pointsSizeArg];
         pxy2 = new double[pointsSizeArg];
 
         for(int i = 0; i < pointsSize; i++){
-            px[i] = pointsArg[i].x;
-            py[i] = pointsArg[i].y;
-            pxy2[i] = pointsArg[i].x * pointsArg[i].x + pointsArg[i].y * pointsArg[i].y;
+            pxy2[i] = px[i] * px[i] + py[i] * py[i];
         }
     }
 
@@ -33,8 +32,6 @@ public:
     }
 
     void cleanup() override {
-        delete[] px;
-        delete[] py;
         delete[] pxy2;
     }
 
