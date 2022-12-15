@@ -5,7 +5,7 @@
 #include <sstream>
 #include <unordered_set>
 #include <functional>
-#include <assert.h>
+#include <cassert>
 
 #include "src/primitive.cuh"
 #include "src/circles.cu"

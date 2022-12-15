@@ -1,33 +1,37 @@
-
+#include "profiler_mesh.cuh"
 
 class MeshDewall : public Mesh{
 
 private:
     // Attempt to find a point to pair with the supplied Edge to complete a triangle
-    int findPoint(const double *pxLocal, const double *pyLocal, int pointsLocalSize,
-                  const double pxEdge1, const double pyEdge1, const double pxEdge2, const double pyEdge2) const {
-        CirclesKernelShotgun circles;
-        circles.initialize(pxLocal, pyLocal, pointsLocalSize);
-
-        bool *output = new bool[pointsLocalSize];
-
-        bool valid;
-        int indexP3 = 0;
-        do{
-            valid = true;
-            circles.run(output, {pxEdge1, pyEdge1}, {pxLocal[indexP3], pyLocal[indexP3]}, {pxEdge2, pyEdge2});
-            for(int i = 0; i < pointsLocalSize; i++){
-                if(output[i]){
-                    valid = false;
-                    indexP3 = i;
-                    break;
-                }
+    int findPoint(const Circles *circles, bool *output,
+                  const double *pxLocal, const double *pyLocal, int pointsLocalSize,
+                  const double pxEdge1, const double pyEdge1, const double pxEdge2, const double pyEdge2,
+                  const int *indicesLocal, const int indexEdge1, const int indexEdge2) const {
+        int indexP3 = -1;
+        for(int i = 0; i < pointsLocalSize; i++){
+            if(indicesLocal[i] != indexEdge1 && indicesLocal[i] != indexEdge2 &&
+                  isAboveEdge(pxEdge1, pyEdge1, pxEdge2, pyEdge2, pxLocal[i], pyLocal[i])){
+                indexP3 = i;
+                break;
             }
-        }while(!valid);
-
-        circles.cleanup();
-
-        delete[] output;
+        }
+        if(indexP3 != -1){
+            bool valid;
+            do{
+                valid = true;
+                circles->run(output, {pxEdge2, pyEdge2}, {pxEdge1, pyEdge1}, {pxLocal[indexP3], pyLocal[indexP3]});
+                for(int i = 0; i < pointsLocalSize; i++){
+                    if(output[i] && i != indexP3 &&
+                       isAboveEdge(pxEdge1, pyEdge1, pxEdge2, pyEdge2, pxLocal[i], pyLocal[i]) &&
+                       indicesLocal[i] != indexEdge1 && indicesLocal[i] != indexEdge2){
+                        valid = false;
+                        indexP3 = i;
+                        break;
+                    }
+                }
+            }while(!valid);
+        }
 
         return indexP3;
     }
@@ -47,8 +51,8 @@ private:
         int sizeIndicesLeft = 0, sizeIndicesRight = 0;
         for(int index = 0; index < indicesLocalSize; index++){
             int i = indicesLocal[index];
-            if(wall.side(px[i], py[i])) sizeIndicesLeft++;
-            else sizeIndicesRight++;
+            if(wall.side(px[i], py[i])) sizeIndicesRight++;
+            else sizeIndicesLeft++;
         }
         int indexIndicesLeft = 0, indexIndicesRight = 0;
         int *indicesLeft = new int[sizeIndicesLeft];
@@ -61,16 +65,16 @@ private:
         auto *pyLocal = new double[indicesLocalSize];
         for(int index = 0; index < indicesLocalSize; index++){
             int i = indicesLocal[index];
-            if(!wall.side(px[i], py[i])){
-                indicesLeft[indexIndicesLeft] = i;
-                pxLeft[indexIndicesLeft] = px[i];
-                pyLeft[indexIndicesLeft] = py[i];
-                indexIndicesLeft++;
-            }else{
+            if(wall.side(px[i], py[i])){
                 indicesRight[indexIndicesRight] = i;
                 pxRight[indexIndicesRight] = px[i];
                 pyRight[indexIndicesRight] = py[i];
                 indexIndicesRight++;
+            }else{
+                indicesLeft[indexIndicesLeft] = i;
+                pxLeft[indexIndicesLeft] = px[i];
+                pyLeft[indexIndicesLeft] = py[i];
+                indexIndicesLeft++;
             }
             pxLocal[index] = px[i];
             pyLocal[index] = py[i];
@@ -133,6 +137,13 @@ private:
 
         // For all active edges, attempt to complete a triangle and update the active edges list
 
+        Circles *circles = new CirclesKernelShotgun();
+        //if(indicesLocalSize < 100) circles = new CirclesSerialPure();
+        //else circles = new CirclesSerialShotgun();
+
+        circles->initialize(pxLocal, pyLocal, indicesLocalSize);
+        bool *circlesOutput = new bool[indicesLocalSize];
+
         bool edgeActiveInherited = false;
         Edge edgeActiveNext = {0, 0};
         while(edgeActiveInherited || !edgesActiveWall.empty()){
@@ -146,7 +157,7 @@ private:
             }
 
             profiler_mesh::startSection(depth, profiler_mesh::LOCATE);
-            int indexP3 = indicesLocal[findPoint(pxLocal, pyLocal, indicesLocalSize, px[edge.i1], py[edge.i1], px[edge.i2], py[edge.i2])];
+            int indexP3 = indicesLocal[findPoint(circles, circlesOutput, pxLocal, pyLocal, indicesLocalSize, px[edge.i1], py[edge.i1], px[edge.i2], py[edge.i2], indicesLocal, edge.i1, edge.i2)];
             profiler_mesh::stopSection(depth, profiler_mesh::LOCATE);
 
             if(indexP3 > -1){ // Check if we've made a new triangle
@@ -184,6 +195,11 @@ private:
                 profiler_mesh::stopSection(depth, profiler_mesh::CHAIN);
             }
         }
+
+        circles->cleanup();
+
+        delete circles;
+        delete[] circlesOutput;
 
         profiler_mesh::stopBranch(depth);
 
@@ -226,16 +242,7 @@ public:
     }
 
     vector<profiler_mesh::Section> getProfilerSections() const override {
-        return {
-            profiler_mesh::WALL,
-            profiler_mesh::DIVIDE_POINTS,
-            profiler_mesh::FIRST_EDGE,
-            profiler_mesh::INIT_LISTS,
-            profiler_mesh::INIT_INHERIT_EDGES,
-            profiler_mesh::LOCATE,
-            profiler_mesh::SAVE,
-            profiler_mesh::CHAIN,
-            profiler_mesh::OTHER};
+        return profiler_mesh::sectionsMeshDewall;
     }
 
 };

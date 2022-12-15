@@ -34,7 +34,7 @@ public:
         py = pyArg;
         pointsSize = pointsSizeArg;
 
-        cudaDeviceReset();
+        //cudaDeviceReset();
 
         pxy2 = new double[pointsSize];
 

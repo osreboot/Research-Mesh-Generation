@@ -24,7 +24,7 @@ public:
         const Circumcircle circle(p1, p2, p3);
         const double coefPx = -2.0 * circle.x;
         const double coefPy = -2.0 * circle.y;
-        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + 0.0000001;
+        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + 0.000000000001;
 
         for(int i = 0; i < pointsSize; i++){
             output[i] = coefPx * px[i] + coefPy * py[i] + pxy2[i] <= comp;

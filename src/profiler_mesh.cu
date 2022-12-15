@@ -66,7 +66,7 @@ namespace profiler_mesh{
         fileProfile.close();
     }
 
-    void startBranch(const int& depth){
+    void startBranch(int depth){
         if(times.size() <= depth){
             unordered_map<Section, unsigned long long> timeMap;
             times.push_back(timeMap);
@@ -74,11 +74,11 @@ namespace profiler_mesh{
         timeLocalBranch = now();
     }
 
-    void stopBranch(const int& depth){
+    void stopBranch(int depth){
         times[depth][OTHER] += elapsedNano(timeLocalBranch, now());
     }
 
-    void startSection(const int& depth, const Section& section){
+    void startSection(int depth, const Section section){
         if(times.size() <= depth){
             unordered_map<Section, unsigned long long> timeMap;
             times.push_back(timeMap);
@@ -86,7 +86,7 @@ namespace profiler_mesh{
         timeLocalSection = now();
     }
 
-    void stopSection(const int& depth, const Section& section){
+    void stopSection(int depth, const Section section){
         times[depth][section] += elapsedNano(timeLocalSection, now());
     }
 

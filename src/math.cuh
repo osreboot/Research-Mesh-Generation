@@ -49,6 +49,13 @@ inline bool isAboveEdge(const Point& pEdge1, const Point& pEdge2, const Point& p
            ((double)pTest.y - (double)pEdge1.y) * ((double)pEdge2.x - (double)pEdge1.x) < 0.0;
 }
 
+inline bool isAboveEdge(const double pxEdge1, const double pyEdge1,
+                        const double pxEdge2, const double pyEdge2,
+                        const double pxTest, const double pyTest){
+    return ((double)pxTest - (double)pxEdge1) * ((double)pyEdge2 - (double)pyEdge1) -
+           ((double)pyTest - (double)pyEdge1) * ((double)pxEdge2 - (double)pxEdge1) < 0.0;
+}
+
 inline bool isInCircle(const Point& a, const Point& b, const Point& c, const Point& d){
     return det(a.x - d.x, a.y - d.y, (a.x * a.x - d.x * d.x) + (a.y * a.y - d.y * d.y),
                b.x - d.x, b.y - d.y, (b.x * b.x - d.x * d.x) + (b.y * b.y - d.y * d.y),
@@ -102,10 +109,10 @@ public:
     }
 
     __host__ __device__ __inline__ bool isInside(const Point& point) const {
-        return ((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y)) <= r2 + 0.0000001;
+        return ((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y)) <= r2 + 0.000000000001;
     }
 
     __host__ __device__ __inline__ bool isInside(const double px, const double py) const {
-        return ((x - px) * (x - px) + (y - py) * (y - py)) <= r2 + 0.0000001;
+        return ((x - px) * (x - px) + (y - py) * (y - py)) <= r2 + 0.000000000001;
     }
 };

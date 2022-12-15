@@ -29,8 +29,9 @@ namespace profiler_mesh{
         OTHER
     };
 
-    const vector<Section> sectionsMeshDeWall = {WALL, INIT_DIVIDE_POINTS, INIT_FIRST_EDGE, INIT_LISTS, INIT_INHERIT_EDGES, L_FIRST, L_CIRCLE, SAVE, CHAIN, MERGE, OTHER};
-    const vector<Section> sectionsMeshBlelloch = {INIT, PREP, REPLACE, SAVE, REDACT, POST, OTHER};
+    const vector<Section> sectionsMeshDewall = {WALL, DIVIDE_POINTS, FIRST_EDGE, INIT_LISTS, INIT_INHERIT_EDGES, LOCATE, SAVE, CHAIN, OTHER};
+    const vector<Section> sectionsMeshDeWallOld = {WALL, INIT_DIVIDE_POINTS, INIT_FIRST_EDGE, INIT_LISTS, INIT_INHERIT_EDGES, L_FIRST, L_CIRCLE, SAVE, CHAIN, MERGE, OTHER};
+    const vector<Section> sectionsMeshBlellochOld = {INIT, PREP, REPLACE, SAVE, REDACT, POST, OTHER};
 
     inline ostream& operator<<(ostream& ostr, Section section){
         switch(section){
@@ -60,10 +61,10 @@ namespace profiler_mesh{
     void startProgram(const string& fileNameArg, const vector<Section>& sectionsActiveArg);
     void stopProgram();
 
-    void startBranch(const int& depth);
-    void stopBranch(const int& depth);
+    void startBranch(int depth);
+    void stopBranch(int depth);
 
-    void startSection(const int& depth, const Section& section);
-    void stopSection(const int& depth, const Section& section);
+    void startSection(int depth, Section section);
+    void stopSection(int depth, Section section);
 
 }
