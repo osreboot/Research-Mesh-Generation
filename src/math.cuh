@@ -49,14 +49,14 @@ inline bool isAboveEdge(const Point& pEdge1, const Point& pEdge2, const Point& p
            ((double)pTest.y - (double)pEdge1.y) * ((double)pEdge2.x - (double)pEdge1.x) < 0.0;
 }
 
-inline bool isAboveEdge(const double pxEdge1, const double pyEdge1,
-                        const double pxEdge2, const double pyEdge2,
-                        const double pxTest, const double pyTest){
-    return ((double)pxTest - (double)pxEdge1) * ((double)pyEdge2 - (double)pyEdge1) -
-           ((double)pyTest - (double)pyEdge1) * ((double)pxEdge2 - (double)pxEdge1) < 0.0;
+__host__ __device__ __inline__ bool isAboveEdge(const double pxEdge1, const double pyEdge1,
+                                                const double pxEdge2, const double pyEdge2,
+                                                const double pxTest, const double pyTest){
+    return (pxTest - pxEdge1) * (pyEdge2 - pyEdge1) -
+           (pyTest - pyEdge1) * (pxEdge2 - pxEdge1) < 0.0;
 }
 
-inline bool isInCircle(const Point& a, const Point& b, const Point& c, const Point& d){
+__host__ __device__ __inline__ bool isInCircle(const Point& a, const Point& b, const Point& c, const Point& d){
     return det(a.x - d.x, a.y - d.y, (a.x * a.x - d.x * d.x) + (a.y * a.y - d.y * d.y),
                b.x - d.x, b.y - d.y, (b.x * b.x - d.x * d.x) + (b.y * b.y - d.y * d.y),
                c.x - d.x, c.y - d.y, (c.x * c.x - d.x * d.x) + (c.y * c.y - d.y * d.y)) <= 0.0;

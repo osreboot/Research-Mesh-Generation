@@ -21,11 +21,11 @@ ostream& operator<<(ostream &ostr, const Point& p){
 struct Edge{
     int i1, i2;
 
-    Edge reverse() const {
+    __host__ __device__ Edge reverse() const {
         return {i2, i1};
     }
 
-    inline bool operator==(const Edge& edge) const {
+    __host__ __device__ __inline__ bool operator==(const Edge& edge) const {
         return (i1 == edge.i1 && i2 == edge.i2);
     }
 };
@@ -57,7 +57,7 @@ class Bounds{
 public:
     double xMin, xMid, xMax, yMin, yMid, yMax;
 
-    Bounds(double xMinArg, double xMaxArg, double yMinArg, double yMaxArg){
+    __host__ __device__ Bounds(double xMinArg, double xMaxArg, double yMinArg, double yMaxArg){
         xMin = xMinArg;
         xMid = (xMinArg + xMaxArg) / 2.0f;
         xMax = xMaxArg;
@@ -66,14 +66,14 @@ public:
         yMax = yMaxArg;
     }
 
-    bool contains(const Point& point) const {
+    __host__ __device__ bool contains(const Point& point) const {
         return point.x >= xMin && point.x <= xMax && point.y >= yMin && point.y <= yMax;
     }
 };
 
 struct Wall{
 
-    static Wall build(const Bounds& bounds, const int& depth){
+    __host__ __device__ static Wall build(const Bounds& bounds, const int& depth){
         bool horizontal = depth % 2 == 0;
         return {horizontal, horizontal ? bounds.xMid : bounds.yMid};
     }
@@ -85,7 +85,7 @@ struct Wall{
         return horizontal ? abs(locationDivider - point.x) : abs(locationDivider - point.y);
     }
 
-    double distance(const double px, const double py) const {
+    __host__ __device__ double distance(const double px, const double py) const {
         return horizontal ? abs(locationDivider - px) : abs(locationDivider - py);
     }
 
@@ -93,7 +93,7 @@ struct Wall{
         return horizontal ? point.x >= locationDivider : point.y >= locationDivider;
     }
 
-    bool side(const double px, const double py) const {
+    __host__ __device__ bool side(const double px, const double py) const {
         return horizontal ? px >= locationDivider : py >= locationDivider;
     }
 
@@ -101,7 +101,7 @@ struct Wall{
         return side(point1) != side(point2);
     }
 
-    bool intersects(const double px1, const double py1, const double px2, const double py2) const {
+    __host__ __device__ bool intersects(const double px1, const double py1, const double px2, const double py2) const {
         return side(px1, py1) != side(px2, py2);
     }
 };

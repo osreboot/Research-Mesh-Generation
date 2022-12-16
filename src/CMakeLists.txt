@@ -11,6 +11,8 @@ list(APPEND SOURCE_FILES
         "circles_kernel_distance.cu"
         "circles_tensor_distance.cu"
         "circles_tensor_shotgun.cu"
+        "circles_local.cu"
+        "circles_local_serial_pure.cu"
         "mesh.cu"
         "mesh_dewall.cu"
         "mesh_dewall_old.cuh"

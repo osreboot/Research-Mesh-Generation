@@ -11,7 +11,7 @@ private:
         int indexP3 = -1;
         for(int i = 0; i < pointsLocalSize; i++){
             if(indicesLocal[i] != indexEdge1 && indicesLocal[i] != indexEdge2 &&
-                  isAboveEdge(pxEdge1, pyEdge1, pxEdge2, pyEdge2, pxLocal[i], pyLocal[i])){
+                isAboveEdge(pxEdge1, pyEdge1, pxEdge2, pyEdge2, pxLocal[i], pyLocal[i])){
                 indexP3 = i;
                 break;
             }
@@ -36,9 +36,20 @@ private:
         return indexP3;
     }
 
+    bool edgeFindAndErase(Edge edge, Edge *edges, int& sizeEdges) const {
+        bool found = false;
+        for(int i = 0; i < sizeEdges; i++){
+            if(edges[i].i1 == edge.i1 && edges[i].i2 == edge.i2) found = true;
+            if(found && i < sizeEdges - 1) edges[i] = edges[i + 1];
+        }
+        if(found) sizeEdges--;
+        return found;
+    }
+
     // Algorithm source: https://doi.org/10.1016/S0010-4485(97)00082-1
     void triangulateRecursive(Triangle *connections, int &connectionsSize, const double *px, const double *py, int pointsSize,
-                              const int *indicesLocal, int indicesLocalSize, const Bounds& bounds, unordered_set<Edge>& edgesActive, const int depth) const {
+                              const int *indicesLocal, int indicesLocalSize, const Bounds bounds, const int depth,
+                              Edge *edgesActive, int sizeEdgesActive) const {
         profiler_mesh::startBranch(depth);
 
         // Calculate dividing wall
@@ -109,52 +120,55 @@ private:
                 }
             }
 
-            edgesActive.insert({aIndex, bIndex});
-            edgesActive.insert({bIndex, aIndex});
+            edgesActive = new Edge[2];
+            sizeEdgesActive = 2;
+            edgesActive[0] = {aIndex, bIndex};
+            edgesActive[1] = {bIndex, aIndex};
             profiler_mesh::stopSection(depth, profiler_mesh::FIRST_EDGE);
         }
 
         profiler_mesh::startSection(depth, profiler_mesh::INIT_LISTS);
-        unordered_set<Edge> edgesActiveWall;
-        shared_ptr<unordered_set<Edge>> edgesActive1(nullptr);
-        shared_ptr<unordered_set<Edge>> edgesActive2(nullptr);
+        int sizeEdgesActiveWall = 0, sizeEdgesActive1 = 0, sizeEdgesActive2 = 0;
+        Edge *edgesActiveWall = new Edge[3 * indicesLocalSize];
+        Edge *edgesActive1 = nullptr;
+        Edge *edgesActive2 = nullptr;
         profiler_mesh::stopSection(depth, profiler_mesh::INIT_LISTS);
 
         // Divide inherited active edges
         profiler_mesh::startSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
-        for(Edge edge : edgesActive){
+        for(int i = 0; i < sizeEdgesActive; i++){
+            Edge edge = edgesActive[i];
             if(wall.intersects(px[edge.i1], py[edge.i1], px[edge.i2], py[edge.i2])){
-                edgesActiveWall.insert(edge);
+                edgesActiveWall[sizeEdgesActiveWall++] = edge;
             }else if(wall.side(px[edge.i1], py[edge.i1])){
-                if(edgesActive2 == nullptr) edgesActive2 = make_shared<unordered_set<Edge>>();
-                edgesActive2->insert(edge);
+                if(edgesActive2 == nullptr) edgesActive2 = new Edge[3 * indicesLocalSize];
+                edgesActive2[sizeEdgesActive2++] = edge;
             }else{
-                if(edgesActive1 == nullptr) edgesActive1 = make_shared<unordered_set<Edge>>();
-                edgesActive1->insert(edge);
+                if(edgesActive1 == nullptr) edgesActive1 = new Edge[3 * indicesLocalSize];
+                edgesActive1[sizeEdgesActive1++] = edge;
             }
         }
         profiler_mesh::stopSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
 
         // For all active edges, attempt to complete a triangle and update the active edges list
 
-        Circles *circles = new CirclesKernelShotgun();
-        //if(indicesLocalSize < 100) circles = new CirclesSerialPure();
+        Circles *circles = new CirclesKernelShotgun();//new CirclesKernelShotgun();
+        //if(indicesLocalSize < 1000) circles = new CirclesSerialPure();
         //else circles = new CirclesSerialShotgun();
 
+        profiler_mesh::startSection(depth, profiler_mesh::PREP);
         circles->initialize(pxLocal, pyLocal, indicesLocalSize);
         bool *circlesOutput = new bool[indicesLocalSize];
+        profiler_mesh::stopSection(depth, profiler_mesh::PREP);
 
         bool edgeActiveInherited = false;
         Edge edgeActiveNext = {0, 0};
-        while(edgeActiveInherited || !edgesActiveWall.empty()){
+        while(edgeActiveInherited || sizeEdgesActiveWall != 0){
             Edge edge;
             if(edgeActiveInherited){
                 edge = edgeActiveNext;
                 edgeActiveInherited = false;
-            }else{
-                edge = *edgesActiveWall.begin();
-                edgesActiveWall.erase(edgesActiveWall.begin());
-            }
+            }else edge = edgesActiveWall[--sizeEdgesActiveWall];
 
             profiler_mesh::startSection(depth, profiler_mesh::LOCATE);
             int indexP3 = indicesLocal[findPoint(circles, circlesOutput, pxLocal, pyLocal, indicesLocalSize, px[edge.i1], py[edge.i1], px[edge.i2], py[edge.i2], indicesLocal, edge.i1, edge.i2)];
@@ -168,50 +182,55 @@ private:
 
                 // Update active edges based on the new triangle
                 profiler_mesh::startSection(depth, profiler_mesh::CHAIN);
-                for(Edge e : vector<Edge>{{indexP3, edge.i2}, {edge.i1, indexP3}}){
+                Edge *edgesPair = new Edge[2];
+                edgesPair[0] = {indexP3, edge.i2};
+                edgesPair[1] = {edge.i1, indexP3};
+                for(int i = 0; i < 2; i++){
+                    Edge e = edgesPair[i];
                     if(wall.intersects(px[e.i1], py[e.i1], px[e.i2], py[e.i2])){
-                        if(edgesActiveWall.count(e.reverse())){
-                            edgesActiveWall.erase(e.reverse());
-                        }else{
+                        if(!edgeFindAndErase(e.reverse(), edgesActiveWall, sizeEdgesActiveWall)){
                             edgeActiveInherited = true;
                             edgeActiveNext = e;
                         }
                     }else if(wall.side(px[e.i1], py[e.i1])){
-                        if(edgesActive2 != nullptr && edgesActive2->count(e.reverse())){
-                            edgesActive2->erase(e.reverse());
-                        }else{
-                            if(edgesActive2 == nullptr) edgesActive2 = make_shared<unordered_set<Edge>>();
-                            edgesActive2->insert(e);
+                        if(edgesActive2 == nullptr || !edgeFindAndErase(e.reverse(), edgesActive2, sizeEdgesActive2)){
+                            if(edgesActive2 == nullptr) edgesActive2 = new Edge[3 * indicesLocalSize];
+                            edgesActive2[sizeEdgesActive2++] = e;
                         }
                     }else{
-                        if(edgesActive1 != nullptr && edgesActive1->count(e.reverse())){
-                            edgesActive1->erase(e.reverse());
-                        }else{
-                            if(edgesActive1 == nullptr) edgesActive1 = make_shared<unordered_set<Edge>>();
-                            edgesActive1->insert(e);
+                        if(edgesActive1 == nullptr || !edgeFindAndErase(e.reverse(), edgesActive1, sizeEdgesActive1)){
+                            if(edgesActive1 == nullptr) edgesActive1 = new Edge[3 * indicesLocalSize];
+                            edgesActive1[sizeEdgesActive1++] = e;
                         }
                     }
                 }
+                delete[] edgesPair;
                 profiler_mesh::stopSection(depth, profiler_mesh::CHAIN);
             }
         }
 
+        profiler_mesh::startSection(depth, profiler_mesh::PREP);
         circles->cleanup();
 
         delete circles;
         delete[] circlesOutput;
+        profiler_mesh::stopSection(depth, profiler_mesh::PREP);
 
         profiler_mesh::stopBranch(depth);
 
         // Recursively call delaunay triangulation on both sides of the wall
         if(edgesActive1 != nullptr){
             Bounds bounds1(bounds.xMin, wall.horizontal ? bounds.xMid : bounds.xMax, bounds.yMin, (!wall.horizontal) ? bounds.yMid : bounds.yMax);
-            triangulateRecursive(connections, connectionsSize, px, py, pointsSize, indicesLeft, sizeIndicesLeft, bounds1, *edgesActive1, depth + 1);
+            triangulateRecursive(connections, connectionsSize, px, py, pointsSize, indicesLeft, sizeIndicesLeft, bounds1, depth + 1, edgesActive1, sizeEdgesActive1);
         }
         if(edgesActive2 != nullptr){
             Bounds bounds2(wall.horizontal ? bounds.xMid : bounds.xMin, bounds.xMax, (!wall.horizontal) ? bounds.yMid : bounds.yMin, bounds.yMax);
-            triangulateRecursive(connections, connectionsSize, px, py, pointsSize, indicesRight, sizeIndicesRight, bounds2, *edgesActive2, depth + 1);
+            triangulateRecursive(connections, connectionsSize, px, py, pointsSize, indicesRight, sizeIndicesRight, bounds2, depth + 1, edgesActive2, sizeEdgesActive2);
         }
+
+        delete[] edgesActiveWall;
+        delete[] edgesActive1;
+        delete[] edgesActive2;
 
         delete[] indicesLeft;
         delete[] indicesRight;
@@ -231,8 +250,7 @@ public:
         int *indices = new int[pointsSize];
         for(int i = 0; i < pointsSize; i++) indices[i] = i;
 
-        unordered_set<Edge> edges = {};
-        triangulateRecursive(connections, connectionsSize, px, py, pointsSize, indices, pointsSize, bounds, edges, 0);
+        triangulateRecursive(connections, connectionsSize, px, py, pointsSize, indices, pointsSize, bounds, 0, nullptr, 0);
 
         delete[] indices;
     }

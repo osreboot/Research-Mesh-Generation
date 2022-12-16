@@ -52,14 +52,14 @@ public:
 
         CUDA_CHECK(cudaMalloc((void**)&doutput, sizeof(bool) * pointsSize));
 
-        cudaDeviceSynchronize();
+        //cudaDeviceSynchronize();
     }
 
     __host__ void run(bool *output, const Point& p1, const Point& p2, const Point& p3) const override {
         const Circumcircle circle(p1, p2, p3);
         const double coefPx = -2.0 * circle.x;
         const double coefPy = -2.0 * circle.y;
-        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + 0.0000001;
+        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + 0.0000000001;
 
         // 4 warps per SM, 84 SMs
 
@@ -81,7 +81,7 @@ public:
 
         delete[] pxy2;
 
-        cudaDeviceSynchronize();
+        //cudaDeviceSynchronize();
     }
 
     string getFileName() const override {

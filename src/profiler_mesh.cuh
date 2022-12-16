@@ -29,7 +29,7 @@ namespace profiler_mesh{
         OTHER
     };
 
-    const vector<Section> sectionsMeshDewall = {WALL, DIVIDE_POINTS, FIRST_EDGE, INIT_LISTS, INIT_INHERIT_EDGES, LOCATE, SAVE, CHAIN, OTHER};
+    const vector<Section> sectionsMeshDewall = {WALL, DIVIDE_POINTS, FIRST_EDGE, INIT_LISTS, INIT_INHERIT_EDGES, PREP, LOCATE, SAVE, CHAIN, OTHER};
     const vector<Section> sectionsMeshDeWallOld = {WALL, INIT_DIVIDE_POINTS, INIT_FIRST_EDGE, INIT_LISTS, INIT_INHERIT_EDGES, L_FIRST, L_CIRCLE, SAVE, CHAIN, MERGE, OTHER};
     const vector<Section> sectionsMeshBlellochOld = {INIT, PREP, REPLACE, SAVE, REDACT, POST, OTHER};
 

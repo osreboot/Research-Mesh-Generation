@@ -20,8 +20,11 @@
 #include "src/circles_kernel_shotgun.cu"
 #include "src/circles_tensor_distance.cu"
 #include "src/circles_tensor_shotgun.cu"
+#include "src/circles_local.cu"
+#include "src/circles_local_serial_pure.cu"
 #include "src/mesh.cu"
 #include "src/mesh_dewall.cu"
+#include "src/mesh_dewall_kernel.cu"
 #include "src/mesh_dewall_old.cuh"
 #include "src/mesh_blelloch_old.cuh"
 #include "src/profiler_circles.cuh"
@@ -161,7 +164,8 @@ int runMeshGeneration(const shared_ptr<Mesh>& mesh){
         py[i] = points[i].y;
     }
 
-    auto *connections = new Triangle[2 * points.size() - 4];
+    auto *connections = new Triangle[3 * points.size() - 4]; // Extra padding so we don't get a memory access error
+                                                             // (below assert catches that)
     int connectionsSize = 0;
 
     // Run delaunay triangulation
@@ -173,6 +177,7 @@ int runMeshGeneration(const shared_ptr<Mesh>& mesh){
     // Post-process output data
     cout << "Verifying output triangles..." << endl;
     assert(connectionsSize <= 2 * points.size() - 4);
+    assert(connectionsSize > 0);
     unordered_set<Triangle> triangles;
     triangles.reserve(connectionsSize);
     int duplicates = 0;
@@ -211,6 +216,7 @@ int main(){
     //runCirclesTest(make_shared<CirclesTensorShotgun>());
 
     return runMeshGeneration(make_shared<MeshDewall>());
+    //return runMeshGeneration(make_shared<MeshDewallKernel>());
     //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDeWall, mesh_dewall::triangulate);
     //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlelloch, mesh_blelloch::triangulate);
 }
