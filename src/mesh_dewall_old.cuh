@@ -158,12 +158,12 @@ namespace mesh_dewall_old{
         profiler_mesh::stopSection(depth, profiler_mesh::INIT_LISTS);
 
         // Calculate dividing wall
-        profiler_mesh::startSection(depth, profiler_mesh::WALL);
+        profiler_mesh::startSection(depth, profiler_mesh::CREATE_WALL);
         Wall wall = Wall::build(bounds, depth);
-        profiler_mesh::stopSection(depth, profiler_mesh::WALL);
+        profiler_mesh::stopSection(depth, profiler_mesh::CREATE_WALL);
 
         // Divide inherited active edges
-        profiler_mesh::startSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
+        profiler_mesh::startSection(depth, profiler_mesh::DIVIDE_EDGES);
         for(Edge edge : edgesActive){
             if(wall.intersects(points[edge.i1], points[edge.i2])){
                 edgesActiveWall.insert(edge);
@@ -175,7 +175,7 @@ namespace mesh_dewall_old{
                 edgesActive1->insert(edge);
             }
         }
-        profiler_mesh::stopSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
+        profiler_mesh::stopSection(depth, profiler_mesh::DIVIDE_EDGES);
 
         // For all active edges, attempt to complete a triangle and update the active edges list
 
@@ -195,9 +195,9 @@ namespace mesh_dewall_old{
 
             if(indexP3 > -1){ // Check if we've made a new triangle
                 // Add new triangle to output list
-                profiler_mesh::startSection(depth, profiler_mesh::SAVE);
+                profiler_mesh::startSection(depth, profiler_mesh::SAVE_TRIANGLES);
                 output.push_back({edge.i1, indexP3, edge.i2});
-                profiler_mesh::stopSection(depth, profiler_mesh::SAVE);
+                profiler_mesh::stopSection(depth, profiler_mesh::SAVE_TRIANGLES);
 
                 // Update active edges based on the new triangle
                 profiler_mesh::startSection(depth, profiler_mesh::CHAIN);
@@ -263,9 +263,9 @@ namespace mesh_dewall_old{
         profiler_mesh::startBranch(0);
 
         // Calculate dividing wall
-        profiler_mesh::startSection(0, profiler_mesh::WALL);
+        profiler_mesh::startSection(0, profiler_mesh::CREATE_WALL);
         Wall wall = Wall::build(bounds, 0);
-        profiler_mesh::stopSection(0, profiler_mesh::WALL);
+        profiler_mesh::stopSection(0, profiler_mesh::CREATE_WALL);
 
         // Divide points by wall side
         profiler_mesh::startSection(0, profiler_mesh::INIT_DIVIDE_POINTS);

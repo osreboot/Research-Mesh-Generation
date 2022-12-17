@@ -20,8 +20,8 @@ namespace profiler_circles{
     }
 
     string fileName;
-    Time timeLocalBatch;
-    map<int, unsigned long long> times;
+    Time timeLocal;
+    map<int, unsigned long long> timesLoad, timesRun, timesSave;
 
     void startProgram(const string& fileNameArg){
         fileName = fileNameArg;
@@ -30,30 +30,38 @@ namespace profiler_circles{
     void stopProgram(){
         cout << "Writing profile to file..." << endl;
         ofstream fileProfile("../profile_" + fileName + "_circles.csv");
-        if(!fileProfile.is_open()){
-            cerr << "Failed to open profile file!" << endl;
-        }
+        if(!fileProfile.is_open()) cerr << "Failed to open profile file!" << endl;
 
-        for(const auto& pair : times){
-            fileProfile << "," << pair.first;
-        }
-        fileProfile << "\n" << fileName;
-        for(const auto& pair : times){
-            fileProfile << "," << pair.second;
-        }
+        for(const auto& pair : timesLoad) fileProfile << "," << pair.first;
+        fileProfile << "\n" << fileName << "[load]";
+        for(const auto& pair : timesLoad) fileProfile << "," << pair.second;
+        fileProfile << "\n" << fileName << "[run]";
+        for(const auto& pair : timesRun) fileProfile << "," << pair.second;
+        fileProfile << "\n" << fileName << "[save]";
+        for(const auto& pair : timesSave) fileProfile << "," << pair.second;
         fileProfile.close();
     }
 
-    void initializeBatch(int size){
-        times[size] = 0;
+    void initializeSections(int size){
+        timesLoad[size] = 0;
+        timesRun[size] = 0;
+        timesSave[size] = 0;
     }
 
-    void startBatch(int size){
-        timeLocalBatch = now();
+    void startSection(){
+        timeLocal = now();
     }
 
-    void stopBatch(int size){
-        times[size] += elapsedNano(timeLocalBatch, now());
+    void stopLoad(int size){
+        timesLoad[size] += elapsedNano(timeLocal, now());
+    }
+
+    void stopRun(int size){
+        timesRun[size] += elapsedNano(timeLocal, now());
+    }
+
+    void stopSave(int size){
+        timesSave[size] += elapsedNano(timeLocal, now());
     }
 
 }

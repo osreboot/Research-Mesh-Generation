@@ -4,7 +4,7 @@ class MeshDewall : public Mesh{
 
 private:
     // Attempt to find a point to pair with the supplied Edge to complete a triangle
-    int findPoint(const Circles *circles, bool *output,
+    int findPoint(Circles *circles, bool *output, const int depth,
                   const double *pxLocal, const double *pyLocal, int pointsLocalSize,
                   const double pxEdge1, const double pyEdge1, const double pxEdge2, const double pyEdge2,
                   const int *indicesLocal, const int indexEdge1, const int indexEdge2) const {
@@ -20,7 +20,15 @@ private:
             bool valid;
             do{
                 valid = true;
+
+                profiler_mesh::startSection(depth, profiler_mesh::CIRCLES_RUN);
                 circles->run(output, {pxEdge2, pyEdge2}, {pxEdge1, pyEdge1}, {pxLocal[indexP3], pyLocal[indexP3]});
+                profiler_mesh::stopSection(depth, profiler_mesh::CIRCLES_RUN);
+
+                profiler_mesh::startSection(depth, profiler_mesh::CIRCLES_SAVE);
+                circles->save(output);
+                profiler_mesh::stopSection(depth, profiler_mesh::CIRCLES_SAVE);
+
                 for(int i = 0; i < pointsLocalSize; i++){
                     if(output[i] && i != indexP3 &&
                        isAboveEdge(pxEdge1, pyEdge1, pxEdge2, pyEdge2, pxLocal[i], pyLocal[i]) &&
@@ -53,9 +61,9 @@ private:
         profiler_mesh::startBranch(depth);
 
         // Calculate dividing wall
-        profiler_mesh::startSection(depth, profiler_mesh::WALL);
+        profiler_mesh::startSection(depth, profiler_mesh::CREATE_WALL);
         Wall wall = Wall::build(bounds, depth);
-        profiler_mesh::stopSection(depth, profiler_mesh::WALL);
+        profiler_mesh::stopSection(depth, profiler_mesh::CREATE_WALL);
 
         // Divide points by wall side
         profiler_mesh::startSection(depth, profiler_mesh::DIVIDE_POINTS);
@@ -135,7 +143,7 @@ private:
         profiler_mesh::stopSection(depth, profiler_mesh::INIT_LISTS);
 
         // Divide inherited active edges
-        profiler_mesh::startSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
+        profiler_mesh::startSection(depth, profiler_mesh::DIVIDE_EDGES);
         for(int i = 0; i < sizeEdgesActive; i++){
             Edge edge = edgesActive[i];
             if(wall.intersects(px[edge.i1], py[edge.i1], px[edge.i2], py[edge.i2])){
@@ -148,18 +156,18 @@ private:
                 edgesActive1[sizeEdgesActive1++] = edge;
             }
         }
-        profiler_mesh::stopSection(depth, profiler_mesh::INIT_INHERIT_EDGES);
+        profiler_mesh::stopSection(depth, profiler_mesh::DIVIDE_EDGES);
 
         // For all active edges, attempt to complete a triangle and update the active edges list
 
-        Circles *circles = new CirclesKernelShotgun();//new CirclesKernelShotgun();
-        //if(indicesLocalSize < 1000) circles = new CirclesSerialPure();
-        //else circles = new CirclesSerialShotgun();
+        Circles *circles = new CirclesSerialLightweight();//new CirclesKernelLightweight();
+        //if(indicesLocalSize < 1000) circles = new CirclesSerialLightweight();
+        //else circles = new CirclesKernelLightweight();
 
-        profiler_mesh::startSection(depth, profiler_mesh::PREP);
-        circles->initialize(pxLocal, pyLocal, indicesLocalSize);
+        profiler_mesh::startSection(depth, profiler_mesh::CIRCLES_LOAD);
+        circles->load(pxLocal, pyLocal, indicesLocalSize);
         bool *circlesOutput = new bool[indicesLocalSize];
-        profiler_mesh::stopSection(depth, profiler_mesh::PREP);
+        profiler_mesh::stopSection(depth, profiler_mesh::CIRCLES_LOAD);
 
         bool edgeActiveInherited = false;
         Edge edgeActiveNext = {0, 0};
@@ -170,18 +178,17 @@ private:
                 edgeActiveInherited = false;
             }else edge = edgesActiveWall[--sizeEdgesActiveWall];
 
-            profiler_mesh::startSection(depth, profiler_mesh::LOCATE);
-            int indexP3 = indicesLocal[findPoint(circles, circlesOutput, pxLocal, pyLocal, indicesLocalSize, px[edge.i1], py[edge.i1], px[edge.i2], py[edge.i2], indicesLocal, edge.i1, edge.i2)];
-            profiler_mesh::stopSection(depth, profiler_mesh::LOCATE);
+            int indexP3 = indicesLocal[findPoint(circles, circlesOutput, depth, pxLocal, pyLocal, indicesLocalSize,
+                                       px[edge.i1], py[edge.i1], px[edge.i2], py[edge.i2], indicesLocal, edge.i1, edge.i2)];
 
             if(indexP3 > -1){ // Check if we've made a new triangle
                 // Add new triangle to output list
-                profiler_mesh::startSection(depth, profiler_mesh::SAVE);
+                profiler_mesh::startSection(depth, profiler_mesh::SAVE_TRIANGLES);
                 connections[connectionsSize++] = {edge.i1, indexP3, edge.i2};
-                profiler_mesh::stopSection(depth, profiler_mesh::SAVE);
+                profiler_mesh::stopSection(depth, profiler_mesh::SAVE_TRIANGLES);
 
                 // Update active edges based on the new triangle
-                profiler_mesh::startSection(depth, profiler_mesh::CHAIN);
+                profiler_mesh::startSection(depth, profiler_mesh::UPDATE_EDGES);
                 Edge *edgesPair = new Edge[2];
                 edgesPair[0] = {indexP3, edge.i2};
                 edgesPair[1] = {edge.i1, indexP3};
@@ -205,16 +212,16 @@ private:
                     }
                 }
                 delete[] edgesPair;
-                profiler_mesh::stopSection(depth, profiler_mesh::CHAIN);
+                profiler_mesh::stopSection(depth, profiler_mesh::UPDATE_EDGES);
             }
         }
 
-        profiler_mesh::startSection(depth, profiler_mesh::PREP);
+        profiler_mesh::startSection(depth, profiler_mesh::CIRCLES_CLEANUP);
         circles->cleanup();
 
         delete circles;
         delete[] circlesOutput;
-        profiler_mesh::stopSection(depth, profiler_mesh::PREP);
+        profiler_mesh::stopSection(depth, profiler_mesh::CIRCLES_CLEANUP);
 
         profiler_mesh::stopBranch(depth);
 

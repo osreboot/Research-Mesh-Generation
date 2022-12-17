@@ -104,7 +104,7 @@ namespace mesh_blelloch_old{
                 vector<shared_ptr<TriangleB>> trianglesNew = replace(pointsS, edgeLinks, edgesReplacing, *t, i);
                 profiler_mesh::stopSection(depth, profiler_mesh::REPLACE);
 
-                profiler_mesh::startSection(depth, profiler_mesh::SAVE);
+                profiler_mesh::startSection(depth, profiler_mesh::SAVE_TRIANGLES);
                 for(const shared_ptr<TriangleB>& tn : trianglesNew){
                     trianglesOutput.insert(tn);
                     // This new triangle isn't complete, populate the global encroaching points list
@@ -116,7 +116,7 @@ namespace mesh_blelloch_old{
                         edgeLinks.insert({edge, tn});
                     }
                 }
-                profiler_mesh::stopSection(depth, profiler_mesh::SAVE);
+                profiler_mesh::stopSection(depth, profiler_mesh::SAVE_TRIANGLES);
                 profiler_mesh::startSection(depth, profiler_mesh::REDACT);
                 // Delete t and unlink all points
                 trianglesOutput.erase(t);

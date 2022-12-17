@@ -7,24 +7,26 @@
 #include <functional>
 #include <cassert>
 
+#include "src/util.cuh"
 #include "src/primitive.cuh"
 #include "src/circles.cu"
 #include "src/circles_serial_noop.cu"
 #include "src/circles_serial_pure.cu"
 #include "src/circles_serial_regions.cu"
 #include "src/circles_serial_distance.cu"
-#include "src/circles_serial_shotgun.cu"
+#include "src/circles_serial_lightweight.cu"
 #include "src/circles_kernel_noop.cu"
 #include "src/circles_kernel_pure.cu"
 #include "src/circles_kernel_distance.cu"
-#include "src/circles_kernel_shotgun.cu"
-#include "src/circles_tensor_distance.cu"
-#include "src/circles_tensor_shotgun.cu"
-#include "src/circles_local.cu"
-#include "src/circles_local_serial_pure.cu"
+#include "src/circles_kernel_lightweight.cu"
+#include "src/circles_ntensor_lightweight.cu"
+#include "src/circles_ntensor_twostep.cu"
+#include "src/circles_ptensor_lightweight.cu"
+#include "src/circles_ptensor_twostep.cu"
+#include "src/circles_tensor_lightweight.cu"
+#include "src/circles_tensor_twostep.cu"
 #include "src/mesh.cu"
 #include "src/mesh_dewall.cu"
-#include "src/mesh_dewall_kernel.cu"
 #include "src/mesh_dewall_old.cuh"
 #include "src/mesh_blelloch_old.cuh"
 #include "src/profiler_circles.cuh"
@@ -69,12 +71,6 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
     // Load points from file
     cout << "Loading points from file..." << endl;
     vector<Point> points = loadPoints();
-    auto *px = new double[points.size()];
-    auto *py = new double[points.size()];
-    for(int i = 0; i < points.size(); i++){
-        px[i] = points[i].x;
-        py[i] = points[i].y;
-    }
 
     // Create triangles
     cout << "Selecting triangles..." << endl;
@@ -97,36 +93,59 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
 
     CirclesSerialPure circlesRef;
 
+    cudaDeviceReset();
+
     cout << "Running circumcircle tests (" << circles->getFileName() << ")..." << endl;
     profiler_circles::startProgram(circles->getFileName());
     //for(int batchSize = 16; batchSize < 3000000; batchSize *= 2){
-    for(int batchPower = 0; batchPower <= 5; batchPower++){
+    for(int batchPower = 0; batchPower <= 6; batchPower++){
         int batchSizeBase = (int)pow(10, batchPower);
-        for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
+        //for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
+        //for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 4 * batchSizeBase, 8 * batchSizeBase}){
         //for(int batchSize = batchSizeBase; batchSize < batchSizeBase * 10; batchSize += batchSizeBase){
+        for(double d = 0.0; d < 1.0 - 0.1; d += 0.1){
+            int batchSize = (int)((double)batchSizeBase * (pow(10, d)));
 
             cout << "Batch size: " << batchSize << endl;
-            profiler_circles::initializeBatch(batchSize);
+            profiler_circles::initializeSections(batchSize);
 
             int errors = 0;
             for(int t = 0; t < triangles.size(); t++){
 
-                auto *batchPoints = new Point[batchSize];
+                auto *px = new double[batchSize];
+                auto *py = new double[batchSize];
                 for(int i = 0; i < batchSize; i++){
-                    batchPoints[i] = points[(offsets[t] + i) % points.size()];
+                    px[i] = points[(offsets[t] + i) % points.size()].x;
+                    py[i] = points[(offsets[t] + i) % points.size()].y;
                 }
-                circles->initialize(px, py, batchSize);
-                circlesRef.initialize(px, py, batchSize);
 
-                // Run circumcircle test
+                //cudaDeviceReset();
+
+                // Load test data
+                profiler_circles::startSection();
+                circles->load(px, py, batchSize);
+                cudaDeviceSynchronize();
+                profiler_circles::stopLoad(batchSize);
+
+                // Run test
                 auto *batchOutput = new bool[batchSize];
-                profiler_circles::startBatch(batchSize);
+                profiler_circles::startSection();
                 circles->run(batchOutput, points[triangles[t].i1], points[triangles[t].i2], points[triangles[t].i3]);
-                profiler_circles::stopBatch(batchSize);
+                cudaDeviceSynchronize();
+                profiler_circles::stopRun(batchSize);
+
+                // Save test data
+                profiler_circles::startSection();
+                circles->save(batchOutput);
+                cudaDeviceSynchronize();
+                profiler_circles::stopSave(batchSize);
 
                 // Run reference
                 auto *batchOutputRef = new bool[batchSize];
+                circlesRef.load(px, py, batchSize);
                 circlesRef.run(batchOutputRef, points[triangles[t].i1], points[triangles[t].i2], points[triangles[t].i3]);
+                circlesRef.save(batchOutputRef);
+                cudaDeviceSynchronize();
 
                 for(int i = 0; i < batchSize; i++){
                     if(batchOutput[i] != batchOutputRef[i]) errors++;
@@ -135,7 +154,9 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
                 circles->cleanup();
                 circlesRef.cleanup();
 
-                delete[] batchPoints;
+                delete[] px;
+                delete[] py;
+
                 delete[] batchOutput;
                 delete[] batchOutputRef;
             }
@@ -144,9 +165,6 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
         }
     }
     profiler_circles::stopProgram();
-
-    delete[] px;
-    delete[] py;
 
     return 0;
 }
@@ -201,22 +219,23 @@ int runMeshGeneration(const shared_ptr<Mesh>& mesh){
 }
 
 int main(){
-    //runCirclesTest(make_shared<CirclesNoop>());
+    //runCirclesTest(make_shared<CirclesSerialNoop>());
     //runCirclesTest(make_shared<CirclesSerialPure>());
-    //runCirclesTest(make_shared<CirclesSerialDisjoint>());
     //runCirclesTest(make_shared<CirclesSerialRegions>());
     //runCirclesTest(make_shared<CirclesSerialDistance>());
-    //runCirclesTest(make_shared<CirclesSerialShotgun>());
+    //runCirclesTest(make_shared<CirclesSerialLightweight>());
     //runCirclesTest(make_shared<CirclesKernelNoop>());
     //runCirclesTest(make_shared<CirclesKernelPure>());
     //runCirclesTest(make_shared<CirclesKernelDistance>());
-    //runCirclesTest(make_shared<CirclesKernelShotgun>());
-    //runCirclesTest(make_shared<CirclesTensorDistance>());
-    //runCirclesTest(make_shared<CirclesTensorDisjoint>());
-    //runCirclesTest(make_shared<CirclesTensorShotgun>());
+    //runCirclesTest(make_shared<CirclesKernelLightweight>());
+    //runCirclesTest(make_shared<CirclesNTensorLightweight>());
+    //runCirclesTest(make_shared<CirclesNTensorTwostep>());
+    runCirclesTest(make_shared<CirclesPTensorLightweight>());
+    runCirclesTest(make_shared<CirclesPTensorTwostep>());
+    runCirclesTest(make_shared<CirclesTensorLightweight>());
+    runCirclesTest(make_shared<CirclesTensorTwostep>());
 
-    return runMeshGeneration(make_shared<MeshDewall>());
-    //return runMeshGeneration(make_shared<MeshDewallKernel>());
-    //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDeWall, mesh_dewall::triangulate);
-    //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlelloch, mesh_blelloch::triangulate);
+    //return runMeshGeneration(make_shared<MeshDewall>());
+    //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDewallOld, mesh_dewall_old::triangulate);
+    //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlellochOld, mesh_blelloch_old::triangulate);
 }
