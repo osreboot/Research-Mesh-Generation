@@ -7,10 +7,11 @@ __global__ void circlesTensorLightweight(bool *out, const float* __restrict__ d_
                                          const double comp, const int pointsSize, const int step){
     unsigned int i = (blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.x * gridDim.y) * blockDim.x + threadIdx.x;
     for(; i < pointsSize; i += step){
-        out[i] = d_D[i] + dpxy2[i] <= comp;
+        out[i] = static_cast<double>(d_D[i]) + dpxy2[i] <= comp;
     }
 }
 
+// Simplified distance single-GEMM Tensor Core algorithm
 class CirclesTensorLightweight : public Circles{
 
 private:
@@ -31,8 +32,6 @@ public:
         m = TENSOR_GET_M;
         n = TENSOR_GET_N;
         k = TENSOR_GET_K;
-
-        //cout << "M:  " << m << "  N:  " << n << "  K:  " << k << endl;
 
         px = new float[m * k];
         py = new float[m * n];
@@ -76,7 +75,7 @@ public:
         const Circumcircle circle(p1, p2, p3);
         const float coefPx = -2.0f * (float)circle.x;
         const float coefPy = -2.0f * (float)circle.y;
-        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + RADIUS_ERROR;
+        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + RADIUS_FLOAT_ERROR;
 
         CUBLAS_CHECK(cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, &coefPx,
                                   d_A, CUDA_R_32F, m,

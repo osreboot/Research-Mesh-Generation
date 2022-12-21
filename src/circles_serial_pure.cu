@@ -1,5 +1,6 @@
 #include "math.cuh"
 
+// Determinant-based single-threaded algorithm
 class CirclesSerialPure : public Circles{
 
 private:

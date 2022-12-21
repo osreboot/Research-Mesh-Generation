@@ -3,6 +3,7 @@
 
 #include "math.cuh"
 
+// Simplified distance double-GEMM Tensor Core algorithm (WITHOUT post-processing kernel invocation for metrics gathering purposes)
 class CirclesPTensorTwostep : public Circles{
 
 private:

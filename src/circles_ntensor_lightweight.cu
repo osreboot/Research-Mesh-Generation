@@ -7,10 +7,11 @@ __global__ void circlesNTensorLightweight(bool *out, const float* __restrict__ d
                                     const double comp, const int pointsSize, const int step){
     unsigned int i = (blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.x * gridDim.y) * blockDim.x + threadIdx.x;
     for(; i < pointsSize; i += step){
-        out[i] = (double)d_D[i] + dpxy2[i] <= comp;
+        out[i] = static_cast<double>(d_D[i]) + dpxy2[i] <= comp;
     }
 }
 
+// Simplified distance single-GEMM Tensor Core algorithm (WITHOUT Tensor Core invocation for metrics gathering purposes)
 class CirclesNTensorLightweight : public Circles{
 
 private:

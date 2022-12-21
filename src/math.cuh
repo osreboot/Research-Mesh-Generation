@@ -63,9 +63,7 @@ __host__ __device__ __inline__ bool isInCircle(const Point& a, const Point& b, c
 }
 
 bool isInCircleRegions(const Point& a, const Point& b, const Point& c, const Point& d){
-    // Fast "out" region test
-    //   *Based on tests conducted, this is actually slightly slower than the standard method based on the general test
-    //    case.
+    // "Out" region test. *Based on tests conducted, this is actually slightly slower than the standard method.
     const int edgeSum = isAboveEdge(a, b, d) + isAboveEdge(b, c, d) + isAboveEdge(c, a, d);
     if(edgeSum == 0) return true;
     if(edgeSum >= 2) return false;

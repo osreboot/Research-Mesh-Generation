@@ -1,5 +1,6 @@
 #include "math.cuh"
 
+// No-op single-threaded algorithm
 class CirclesSerialNoop : public Circles{
 
 private:

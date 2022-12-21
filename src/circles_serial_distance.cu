@@ -1,5 +1,6 @@
 #include "math.cuh"
 
+// Pure distance single-threaded algorithm
 class CirclesSerialDistance : public Circles{
 
 private:

@@ -1,5 +1,6 @@
 #include "math.cuh"
 
+// Simplified distance single-threaded algorithm
 class CirclesSerialLightweight : public Circles{
 
 private:

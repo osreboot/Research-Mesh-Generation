@@ -1,5 +1,6 @@
 #include "math.cuh"
 
+// Single-threaded distance algorithm with "out" regions test
 class CirclesSerialRegions : public Circles{
 
 private:

@@ -10,6 +10,7 @@ __global__ void circlesKernelPure(bool *out, const double* __restrict__ px, cons
     }
 }
 
+// Determinant-based parallel algorithm
 class CirclesKernelPure : public Circles{
 
 private:

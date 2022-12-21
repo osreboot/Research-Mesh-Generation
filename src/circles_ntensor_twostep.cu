@@ -6,10 +6,11 @@
 __global__ void circlesNTensorTwostep(bool *out, const float* __restrict__ d_D, const double comp, const int pointsSize, const int step){
     unsigned int i = (blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.x * gridDim.y) * blockDim.x + threadIdx.x;
     for(; i < pointsSize; i += step){
-        out[i] = d_D[i] <= comp;
+        out[i] = static_cast<double>(d_D[i]) <= comp;
     }
 }
 
+// Simplified distance double-GEMM Tensor Core algorithm (WITHOUT Tensor Core invocation for metrics gathering purposes)
 class CirclesNTensorTwostep : public Circles{
 
 private:

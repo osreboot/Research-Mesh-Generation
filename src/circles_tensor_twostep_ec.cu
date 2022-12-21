@@ -3,15 +3,20 @@
 
 #include "math.cuh"
 
-__global__ void circlesTensorTwostep(bool *out, const float* __restrict__ d_D, const double comp, const int pointsSize, const int step){
+__global__ void circlesTensorTwostepEC(bool *out, const double* __restrict__ dpx, const double* __restrict__ dpy, const double* __restrict__ dpxy2,
+                                       const double doubleCoefPx, const double doubleCoefPy,
+                                       const float* __restrict__ d_D, const double comp, const int pointsSize, const int step){
     unsigned int i = (blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.x * gridDim.y) * blockDim.x + threadIdx.x;
     for(; i < pointsSize; i += step){
-        out[i] = static_cast<double>(d_D[i]) <= comp;
+        const double diff = comp - (double)d_D[i];
+        if(fabs(diff) < 0.000001){
+            out[i] = doubleCoefPx * dpx[i] + doubleCoefPy * dpy[i] + dpxy2[i] <= comp;
+        }else out[i] = diff >= 0.0;
     }
 }
 
-// Simplified distance double-GEMM Tensor Core algorithm
-class CirclesTensorTwostep : public Circles{
+// Simplified distance single-GEMM Tensor Core algorithm with precision error correction
+class CirclesTensorTwostepEC : public Circles{
 
 private:
     int n = 0, m = 0, k = 0;
@@ -19,6 +24,8 @@ private:
     float *px = nullptr, *py = nullptr, *ident = nullptr;
     int pointsSize = 0;
     float *pxy2 = nullptr;
+    const double *doubleDPx = nullptr, *doubleDPy = nullptr;
+    double *dpx, *dpy, *doublePxy2 = nullptr, *dpxy2 = nullptr;
     bool *doutput = nullptr;
 
     cublasHandle_t handle;
@@ -36,11 +43,16 @@ public:
         py = new float[m * n];
         pxy2 = new float[m * k];
 
+        doubleDPx = pxArg;
+        doubleDPy = pyArg;
+        doublePxy2 = new double[pointsSize];
+
         for(int i = 0; i < m * k; i++){
             if(i < pointsSize){
                 px[i] = (float)pxArg[i];
                 py[i] = (float)pyArg[i];
                 pxy2[i] = (float)pxArg[i] * (float)pxArg[i] + (float)pyArg[i] * (float)pyArg[i];
+                doublePxy2[i] = pxArg[i] * pxArg[i] + pyArg[i] * pyArg[i];
             }else{
                 px[i] = 0.0f;
                 py[i] = 0.0f;
@@ -68,6 +80,13 @@ public:
         CUBLAS_CHECK(cublasSetVector(n * m, sizeof(py[0]), py, 1, d_C, 1));
         CUBLAS_CHECK(cublasSetVector(n * m, sizeof(pxy2[0]), pxy2, 1, d_D, 1));
 
+        CUDA_CHECK(cudaMalloc((void**)&dpx, sizeof(double) * pointsSize));
+        CUDA_CHECK(cudaMalloc((void**)&dpy, sizeof(double) * pointsSize));
+        CUDA_CHECK(cudaMemcpy(dpx, doubleDPx, sizeof(double) * pointsSize, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(dpy, doubleDPy, sizeof(double) * pointsSize, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMalloc((void**)&dpxy2, sizeof(double) * pointsSize));
+        CUDA_CHECK(cudaMemcpy(dpxy2, doublePxy2, sizeof(double) * pointsSize, cudaMemcpyHostToDevice));
+
         CUDA_CHECK(cudaMalloc((void**)&doutput, sizeof(bool) * pointsSize));
     }
 
@@ -75,7 +94,14 @@ public:
         const Circumcircle circle(p1, p2, p3);
         const float coefPx = -2.0f * (float)circle.x;
         const float coefPy = -2.0f * (float)circle.y;
-        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + RADIUS_FLOAT_ERROR;
+        const double doubleCoefPx = -2.0 * circle.x;
+        const double doubleCoefPy = -2.0 * circle.y;
+        const double comp = circle.r2 - circle.x * circle.x - circle.y * circle.y + RADIUS_ERROR;
+
+        CUBLAS_CHECK(cublasSetVector(n * m, sizeof(py[0]), py, 1, d_C, 1));
+        CUBLAS_CHECK(cublasSetVector(n * m, sizeof(pxy2[0]), pxy2, 1, d_D, 1));
+
+        cudaDeviceSynchronize();
 
         CUBLAS_CHECK(cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, &coefPx,
                                   d_A, CUDA_R_32F, m,
@@ -102,7 +128,7 @@ public:
 
         cudaDeviceSynchronize();
 
-        circlesTensorTwostep<<<dimGrid, dimBlock>>>(doutput, d_D, comp, pointsSize, step);
+        circlesTensorTwostepEC<<<dimGrid, dimBlock>>>(doutput, dpx, dpy, dpxy2, doubleCoefPx, doubleCoefPy, d_D, comp, pointsSize, step);
         CUDA_CHECK_LAST_ERROR();
     }
 
@@ -118,11 +144,16 @@ public:
         cudaFree(d_C);
         cudaFree(d_D);
 
+        cudaFree(dpx);
+        cudaFree(dpy);
+        cudaFree(dpxy2);
+
         cudaFree(doutput);
 
         delete[] px;
         delete[] py;
         delete[] pxy2;
+        delete[] doublePxy2;
         delete[] ident;
     }
 

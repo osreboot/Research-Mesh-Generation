@@ -25,6 +25,7 @@
 #include "src/circles_ptensor_twostep.cu"
 #include "src/circles_tensor_lightweight.cu"
 #include "src/circles_tensor_twostep.cu"
+#include "src/circles_tensor_twostep_ec.cu"
 #include "src/mesh.cu"
 #include "src/mesh_dewall.cu"
 #include "src/mesh_dewall_old.cuh"
@@ -74,8 +75,8 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
 
     // Create triangles
     cout << "Selecting triangles..." << endl;
-    vector<Triangle> triangles;
-    for(int i = 0; i < 100; i++){
+    auto *triangles = new Triangle[CIRCLE_TEST_TRIANGLES];
+    for(int i = 0; i < CIRCLE_TEST_TRIANGLES; i++){
         Triangle triangle{};
         triangle.i1 = rand() % points.size();
         do{
@@ -84,11 +85,11 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
         do{
             triangle.i3 = rand() % points.size();
         }while(triangle.i3 == triangle.i1 || triangle.i3 == triangle.i2);
-        triangles.push_back(makeClockwise(points, triangle));
+        triangles[i] = makeClockwise(points, triangle);
     }
-    vector<int> offsets;
-    for(int i = 0; i < 100; i++){
-        offsets.push_back(rand() % points.size());
+    int *offsets = new int[CIRCLE_TEST_TRIANGLES];
+    for(int i = 0; i < CIRCLE_TEST_TRIANGLES; i++){
+        offsets[i] = rand() % points.size();
     }
 
     CirclesSerialPure circlesRef;
@@ -101,7 +102,6 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
     for(int batchPower = 0; batchPower <= 6; batchPower++){
         int batchSizeBase = (int)pow(10, batchPower);
         //for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 5 * batchSizeBase}){
-        //for(int batchSize : {batchSizeBase, 2 * batchSizeBase, 4 * batchSizeBase, 8 * batchSizeBase}){
         //for(int batchSize = batchSizeBase; batchSize < batchSizeBase * 10; batchSize += batchSizeBase){
         for(double d = 0.0; d < 1.0 - 0.1; d += 0.1){
             int batchSize = (int)((double)batchSizeBase * (pow(10, d)));
@@ -110,7 +110,7 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
             profiler_circles::initializeSections(batchSize);
 
             int errors = 0;
-            for(int t = 0; t < triangles.size(); t++){
+            for(int t = 0; t < CIRCLE_TEST_TRIANGLES; t++){
 
                 auto *px = new double[batchSize];
                 auto *py = new double[batchSize];
@@ -161,10 +161,13 @@ int runCirclesTest(const shared_ptr<Circles>& circles){
                 delete[] batchOutputRef;
             }
 
-            if(errors > 0) cout << "ERROR: Failed " << errors << " accuracy tests! (" << ((float)errors / (float)(triangles.size() * batchSize)) * 100.0f << "%)" << endl;
+            if(errors > 0) cout << "ERROR: Failed " << errors << " accuracy tests! (" << ((float)errors / (float)(CIRCLE_TEST_TRIANGLES * batchSize)) * 100.0f << "%)" << endl;
         }
     }
     profiler_circles::stopProgram();
+
+    delete[] triangles;
+    delete[] offsets;
 
     return 0;
 }
@@ -219,6 +222,7 @@ int runMeshGeneration(const shared_ptr<Mesh>& mesh){
 }
 
 int main(){
+    // // Triangle circumcircle test algorithms
     //runCirclesTest(make_shared<CirclesSerialNoop>());
     //runCirclesTest(make_shared<CirclesSerialPure>());
     //runCirclesTest(make_shared<CirclesSerialRegions>());
@@ -230,12 +234,14 @@ int main(){
     //runCirclesTest(make_shared<CirclesKernelLightweight>());
     //runCirclesTest(make_shared<CirclesNTensorLightweight>());
     //runCirclesTest(make_shared<CirclesNTensorTwostep>());
-    runCirclesTest(make_shared<CirclesPTensorLightweight>());
-    runCirclesTest(make_shared<CirclesPTensorTwostep>());
-    runCirclesTest(make_shared<CirclesTensorLightweight>());
-    runCirclesTest(make_shared<CirclesTensorTwostep>());
+    //runCirclesTest(make_shared<CirclesPTensorLightweight>());
+    //runCirclesTest(make_shared<CirclesPTensorTwostep>());
+    //runCirclesTest(make_shared<CirclesTensorLightweight>());
+    //runCirclesTest(make_shared<CirclesTensorTwostep>());
+    //runCirclesTest(make_shared<CirclesTensorTwostepEC>());
 
-    //return runMeshGeneration(make_shared<MeshDewall>());
-    //return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDewallOld, mesh_dewall_old::triangulate);
-    //return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlellochOld, mesh_blelloch_old::triangulate);
+    // // Mesh generation algorithms
+    return runMeshGeneration(make_shared<MeshDewall>());
+    // return runMeshGeneration("dewall", profiler_mesh::sectionsMeshDewallOld, mesh_dewall_old::triangulate);
+    // return runMeshGeneration("blelloch", profiler_mesh::sectionsMeshBlellochOld, mesh_blelloch_old::triangulate);
 }

@@ -2,14 +2,21 @@
 
 using namespace std;
 
+// The number of unique triangles to evaluate for the circumcircle tests
+#define CIRCLE_TEST_TRIANGLES 100
+
+// Error constants used to fix rounding issues
 #define RADIUS_ERROR (0.0000000001)
+#define RADIUS_FLOAT_ERROR (0.0000001)
 
-#define KERNEL_DIM_GRID {84, 4, 1}
-#define KERNEL_DIM_BLOCK {32, 1, 1}
+// Grid and block dimensions for all kernels
+#define KERNEL_DIM_GRID {84, 64, 1}
+#define KERNEL_DIM_BLOCK {64, 1, 1}
 
-#define TENSOR_GET_M (256)
-#define TENSOR_GET_N ((int)ceil(((double)pointsSize / TENSOR_GET_M) / 256.0) * 256)
-#define TENSOR_GET_K ((int)ceil(((double)pointsSize / TENSOR_GET_M) / 256.0) * 256)
+// GEMM matrix dimensions
+#define TENSOR_GET_M (4096)
+#define TENSOR_GET_N ((int)ceil(((double)pointsSize / TENSOR_GET_M) / 16.0) * 16)
+#define TENSOR_GET_K ((int)ceil(((double)pointsSize / TENSOR_GET_M) / 16.0) * 16)
 
 #define CUDA_CHECK(errArg)                                                              \
     do{                                                                                 \

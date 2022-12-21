@@ -8,6 +8,7 @@ __global__ void circlesKernelDistance(bool *out, const double* __restrict__ px, 
     }
 }
 
+// Pure distance-based parallel algorithm
 class CirclesKernelDistance : public Circles{
 
 private:

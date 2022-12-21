@@ -11,6 +11,7 @@ __global__ void circlesKernelLightweight(bool *out, const double* __restrict__ d
     }
 }
 
+// Simplified distance-based parallel algorithm
 class CirclesKernelLightweight : public Circles{
 
 private:

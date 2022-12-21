@@ -158,17 +158,15 @@ private:
         }
         profiler_mesh::stopSection(depth, profiler_mesh::DIVIDE_EDGES);
 
-        // For all active edges, attempt to complete a triangle and update the active edges list
-
-        Circles *circles = new CirclesSerialLightweight();//new CirclesKernelLightweight();
-        //if(indicesLocalSize < 1000) circles = new CirclesSerialLightweight();
-        //else circles = new CirclesKernelLightweight();
+        // Initialize circumcircle test solver
+        Circles *circles = new CirclesTensorTwostepEC();
 
         profiler_mesh::startSection(depth, profiler_mesh::CIRCLES_LOAD);
         circles->load(pxLocal, pyLocal, indicesLocalSize);
         bool *circlesOutput = new bool[indicesLocalSize];
         profiler_mesh::stopSection(depth, profiler_mesh::CIRCLES_LOAD);
 
+        // For all active edges, attempt to complete a triangle and update the active edges list
         bool edgeActiveInherited = false;
         Edge edgeActiveNext = {0, 0};
         while(edgeActiveInherited || sizeEdgesActiveWall != 0){

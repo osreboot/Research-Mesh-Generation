@@ -8,6 +8,7 @@ __global__ void circlesKernelNoop(bool *out, const double* __restrict__ px, cons
     }
 }
 
+// Reference no-op parallel algorithm
 class CirclesKernelNoop : public Circles{
 
 private:
