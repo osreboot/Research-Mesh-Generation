@@ -1,6 +1,8 @@
 # What is this?
 This research project explores the application of NVIDIA Tensor Core hardware acceleration in two-dimensional surface mesh generation. Two algorithms are implemented: the "DeWall" [1] recursive partitioning algorithm and the "Blelloch" [2] sequential subdivision algorithm. This project has no dependencies besides the standard CUDA libraries.
 
+The final project report is available [here](https://github.com/osreboot/Research-Mesh-Generation/blob/master/Report.pdf).
+
 # Usage
 There are several parts to this project:
 
